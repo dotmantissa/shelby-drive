@@ -8,7 +8,7 @@ import {
 	Wallet,
 	XCircle,
 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/Button"
 import { Modal } from "@/components/ui/Modal"
 import { ProgressBar } from "@/components/ui/ProgressBar"
@@ -44,18 +44,28 @@ export function UploadModal({
 		state.step === "success" ||
 		state.step === "error"
 
+	// Fire the success/error toast exactly once per (step, error) transition.
+	// Without this gate, any rerender that changes the `toast` context value
+	// re-triggers the effect and spawns a new toast.
+	const lastToastedRef = useRef<string>("")
 	useEffect(() => {
+		if (state.step !== "success" && state.step !== "error") {
+			lastToastedRef.current = ""
+			return
+		}
+		const key = `${state.step}:${state.error ?? ""}:${state.fileName ?? ""}`
+		if (lastToastedRef.current === key) return
+		lastToastedRef.current = key
+
 		if (state.step === "success") {
 			toast.success(
 				"File stored successfully",
 				state.fileName ?? undefined,
 			)
-		} else if (state.step === "error" && state.error) {
-			if (state.error === "Transaction cancelled") {
-				toast.info("Transaction cancelled")
-			} else {
-				toast.error("Upload failed", state.error)
-			}
+		} else if (state.error === "Transaction cancelled") {
+			toast.info("Transaction cancelled")
+		} else if (state.error) {
+			toast.error("Upload failed", state.error)
 		}
 	}, [state.step, state.error, state.fileName, toast])
 

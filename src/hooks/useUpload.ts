@@ -52,8 +52,44 @@ const isUserRejection = (err: unknown): boolean => {
 	)
 }
 
+/**
+ * Translate raw wallet/SDK errors into human-friendly messages. Most upload
+ * failures fall into one of a few buckets — bad network, no funds, blob
+ * already written, etc. Leave anything we don't recognise pass through.
+ */
+const translateError = (err: unknown): string => {
+	const msg = err instanceof Error ? err.message : String(err ?? "")
+	const lower = msg.toLowerCase()
+
+	if (
+		lower.includes("function_not_found") ||
+		lower.includes("module_not_found") ||
+		lower.includes("linker error") ||
+		lower.includes("simulation error") ||
+		lower.includes("generic error")
+	) {
+		return "Transaction simulation failed. Most often this means your wallet is on the wrong network — switch to Shelbynet and try again."
+	}
+	if (lower.includes("eblob_write_chunkset_already_exists")) {
+		return "A blob with this exact name already exists for your account. Rename the file before re-uploading."
+	}
+	if (lower.includes("insufficient_balance_for_transaction_fee")) {
+		return "Not enough APT to pay for the transaction fee on Shelbynet. Request testnet APT from the Shelby Discord."
+	}
+	if (lower.includes("e_insufficient_funds") || lower.includes("eblob_write_insufficient_funds")) {
+		return "Not enough ShelbyUSD to pay for blob storage. Request testnet tokens from the Shelby Discord."
+	}
+	if (lower.includes("429")) {
+		return "Rate limit exceeded. The default API key is heavily throttled — get your own at docs.shelby.xyz."
+	}
+	if (lower.includes("401") || lower.includes("unauthorized")) {
+		return "Unauthorized. The Shelby API key isn't accepted by the Shelbynet indexer/RPC. Check NEXT_PUBLIC_SHELBY_API_KEY."
+	}
+	return msg || "Upload failed"
+}
+
 export const useUpload = () => {
-	const { account, signAndSubmitTransaction } = useWallet()
+	const { account, signAndSubmitTransaction, network } = useWallet()
 	const [state, setState] = useState<UploadState>(initialState)
 
 	const upload = useCallback(
@@ -63,6 +99,21 @@ export const useUpload = () => {
 					...initialState,
 					step: "error",
 					error: "Wallet not connected",
+					fileName: file.name,
+					fileSize: file.size,
+				})
+				return
+			}
+
+			// Pre-flight: the Shelby contract only exists on Shelbynet. Refusing
+			// here gives a much clearer message than the wallet's opaque
+			// "Simulation error: Generic error".
+			const networkName = network?.name?.toLowerCase()
+			if (networkName && networkName !== "shelbynet") {
+				setState({
+					...initialState,
+					step: "error",
+					error: `Wallet is on ${network?.name}. Switch to Shelbynet and try again.`,
 					fileName: file.name,
 					fileSize: file.size,
 				})
@@ -137,9 +188,7 @@ export const useUpload = () => {
 				const rejected = isUserRejection(err)
 				const message = rejected
 					? "Transaction cancelled"
-					: err instanceof Error
-						? err.message
-						: "Upload failed"
+					: translateError(err)
 				setState((s) => ({
 					...s,
 					step: "error",
@@ -148,7 +197,7 @@ export const useUpload = () => {
 				}))
 			}
 		},
-		[account, signAndSubmitTransaction],
+		[account, signAndSubmitTransaction, network?.name],
 	)
 
 	const reset = useCallback(() => {

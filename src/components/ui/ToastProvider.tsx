@@ -6,6 +6,7 @@ import {
 	useCallback,
 	useContext,
 	useMemo,
+	useRef,
 	useState,
 } from "react"
 import { ToastViewport } from "./Toast"
@@ -51,17 +52,36 @@ export function ToastProvider({ children }: PropsWithChildren) {
 		[dismiss],
 	)
 
+	// We need `success`/`error`/`info`/`warning` to keep stable references across
+	// renders (so consumer effects don't re-fire every time the toasts array
+	// changes). Hold `push` in a ref and expose stable callbacks via useCallback.
+	const pushRef = useRef(push)
+	pushRef.current = push
+
+	const success = useCallback(
+		(title: string, message?: string) =>
+			pushRef.current({ type: "success", title, message }),
+		[],
+	)
+	const error = useCallback(
+		(title: string, message?: string) =>
+			pushRef.current({ type: "error", title, message }),
+		[],
+	)
+	const info = useCallback(
+		(title: string, message?: string) =>
+			pushRef.current({ type: "info", title, message }),
+		[],
+	)
+	const warning = useCallback(
+		(title: string, message?: string) =>
+			pushRef.current({ type: "warning", title, message }),
+		[],
+	)
+
 	const value = useMemo<ToastContextValue>(
-		() => ({
-			toasts,
-			push,
-			dismiss,
-			success: (title, message) => push({ type: "success", title, message }),
-			error: (title, message) => push({ type: "error", title, message }),
-			info: (title, message) => push({ type: "info", title, message }),
-			warning: (title, message) => push({ type: "warning", title, message }),
-		}),
-		[toasts, push, dismiss],
+		() => ({ toasts, push, dismiss, success, error, info, warning }),
+		[toasts, push, dismiss, success, error, info, warning],
 	)
 
 	return (

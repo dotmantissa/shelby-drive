@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import { BlobGrid } from "@/components/dashboard/BlobGrid"
 import { BlobTable } from "@/components/dashboard/BlobTable"
 import { EmptyState } from "@/components/dashboard/EmptyState"
+import { NetworkBanner } from "@/components/dashboard/NetworkBanner"
 import { StorageStats } from "@/components/dashboard/StorageStats"
 import { ViewToggle } from "@/components/dashboard/ViewToggle"
 import { Button } from "@/components/ui/Button"
@@ -63,30 +64,11 @@ export default function DashboardPage() {
 
 	const address = addressToString(account.address)
 	const networkName = network?.name?.toLowerCase()
-	const networkMismatch =
-		networkName && networkName !== "shelbynet" && networkName !== "testnet"
+	const isOnShelbynet = networkName === "shelbynet"
 
 	return (
 		<div className="space-y-6 py-8">
-			{networkMismatch && (
-				<GlassCard
-					className="flex items-center gap-3 border-l-4"
-					padded={false}
-				>
-					<div
-						className="flex w-full items-center gap-3 px-4 py-3 text-sm"
-						style={{ borderLeftColor: "var(--status-warning)" }}
-					>
-						<AlertTriangle
-							size={18}
-							className="text-[var(--status-warning)]"
-						/>
-						<span className="text-[var(--text-primary)]">
-							Please switch your wallet to Aptos Testnet
-						</span>
-					</div>
-				</GlassCard>
-			)}
+			<NetworkBanner />
 
 			{!isShelbyConfigured() && (
 				<GlassCard padded={false}>
@@ -161,7 +143,7 @@ export default function DashboardPage() {
 				totalSize={totalSize}
 			/>
 
-			<UploadZone onFile={handleFile} />
+			<UploadZone onFile={handleFile} disabled={!isOnShelbynet} />
 
 			<div className="flex items-center justify-between">
 				<div>
