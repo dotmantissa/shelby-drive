@@ -12,9 +12,10 @@ export const SHELBY_API_KEY = SHELBY_KEY
 export const APTOS_API_KEY = APTOS_KEY
 
 /**
- * Base host for the Shelby RPC. The SDK ships with
- * `NetworkToShelbyRPCBaseUrl.shelbynet = "https://api.shelbynet.shelby.xyz/shelby"`.
- * We split the host out so we can build direct blob URLs ourselves.
+ * Base host for the Shelby RPC. The SDK's
+ * `NetworkToShelbyRPCBaseUrl.shelbynet = "https://api.shelbynet.shelby.xyz/shelby"`,
+ * so we use the host as the base and append `/shelby/v1/blobs/...` for
+ * direct downloads.
  */
 export const SHELBY_RPC_URL =
 	process.env.NEXT_PUBLIC_SHELBY_RPC_URL ??
@@ -23,6 +24,16 @@ export const SHELBY_RPC_URL =
 export const SHELBY_EXPLORER_URL =
 	process.env.NEXT_PUBLIC_SHELBY_EXPLORER_URL ??
 	"https://explorer.shelby.xyz/shelbynet"
+
+/** Canonical Shelbynet endpoints — all live under api.shelbynet.shelby.xyz. */
+export const SHELBYNET = {
+	chainId: 113,
+	name: "Shelbynet",
+	fullnodeUrl: "https://api.shelbynet.shelby.xyz/v1",
+	indexerUrl: "https://api.shelbynet.shelby.xyz/v1/graphql",
+	rpcUrl: "https://api.shelbynet.shelby.xyz/shelby",
+	faucetUrl: "https://faucet.shelbynet.shelby.xyz",
+} as const
 
 export const APTOS_EXPLORER_BASE = "https://explorer.aptoslabs.com/txn"
 

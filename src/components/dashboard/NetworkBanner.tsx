@@ -1,14 +1,14 @@
 "use client"
 
+import { Network } from "@aptos-labs/ts-sdk"
 import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { AlertTriangle, Check, Copy } from "lucide-react"
+import { AlertTriangle, ArrowRight, Check, Copy } from "lucide-react"
 import { useState } from "react"
+import { Button } from "@/components/ui/Button"
 import { GlassCard } from "@/components/ui/GlassCard"
+import { useToast } from "@/components/ui/ToastProvider"
+import { SHELBYNET } from "@/lib/constants"
 import { copyToClipboard } from "@/lib/utils"
-
-const SHELBYNET_RPC = "https://api.shelbynet.aptoslabs.com/v1"
-const SHELBYNET_FAUCET = "https://api.shelbynet.aptoslabs.com"
-const SHELBYNET_NAME = "Shelbynet"
 
 interface CopyRowProps {
 	label: string
@@ -51,17 +51,46 @@ function CopyRow({ label, value }: CopyRowProps) {
 }
 
 export function NetworkBanner() {
-	const { network } = useWallet()
+	const { network, changeNetwork, wallet } = useWallet()
+	const toast = useToast()
+	const [switching, setSwitching] = useState(false)
+	const [manualMode, setManualMode] = useState(false)
+
 	const networkName = network?.name?.toLowerCase()
 	const isOnShelbynet = networkName === "shelbynet"
 	if (isOnShelbynet) return null
 
 	const currentLabel = network?.name ?? "Unknown"
+	const walletName = wallet?.name ?? "your wallet"
+
+	const handleSwitch = async () => {
+		setSwitching(true)
+		try {
+			const result = await changeNetwork(Network.SHELBYNET)
+			if (result?.success === false) {
+				const reason = result.reason ?? "Wallet declined the switch"
+				toast.error("Couldn't switch network", reason)
+				setManualMode(true)
+			} else {
+				toast.success(`Switched ${walletName} to Shelbynet`)
+			}
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err)
+			toast.error(
+				"Couldn't switch network automatically",
+				`${walletName} doesn't support adding Shelbynet — add it manually below.`,
+			)
+			console.error("changeNetwork failed:", msg)
+			setManualMode(true)
+		} finally {
+			setSwitching(false)
+		}
+	}
 
 	return (
 		<GlassCard padded={false}>
 			<div className="border-l-4 border-[var(--status-warning)] p-4">
-				<div className="mb-3 flex items-start gap-3">
+				<div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start">
 					<AlertTriangle
 						size={20}
 						className="shrink-0 text-[var(--status-warning)]"
@@ -76,20 +105,61 @@ export function NetworkBanner() {
 						</p>
 						<p className="mt-1 text-xs text-[var(--text-secondary)]">
 							The Shelby Move module only exists on{" "}
-							<strong>Shelbynet</strong>. Submitting from any other
-							network (including Aptos Testnet) fails with a generic
-							simulation error. In Petra: Settings → Network → Add
-							Custom Network, then enter the values below.
+							<strong>Shelbynet</strong>. Submitting from any
+							other network fails with a generic simulation
+							error.
 						</p>
 					</div>
+					<Button
+						onClick={handleSwitch}
+						loading={switching}
+						disabled={switching}
+						size="md"
+						className="shrink-0"
+					>
+						{!switching && <ArrowRight size={14} />}
+						Switch to Shelbynet
+					</Button>
 				</div>
 
-				<div className="grid gap-2 sm:grid-cols-2">
-					<CopyRow label="Network name" value={SHELBYNET_NAME} />
-					<CopyRow label="RPC URL" value={SHELBYNET_RPC} />
-					<CopyRow label="Faucet URL" value={SHELBYNET_FAUCET} />
-					<CopyRow label="Chain ID" value="auto-detect" />
-				</div>
+				{manualMode && (
+					<>
+						<p className="mb-2 text-xs text-[var(--text-secondary)]">
+							{walletName} couldn't add the network automatically.
+							Add it manually: in your wallet → Settings →
+							Network → Add Custom Network, then paste these
+							values.
+						</p>
+						<div className="grid gap-2 sm:grid-cols-2">
+							<CopyRow
+								label="Network name"
+								value={SHELBYNET.name}
+							/>
+							<CopyRow
+								label="Chain ID"
+								value={String(SHELBYNET.chainId)}
+							/>
+							<CopyRow
+								label="RPC / Full node URL"
+								value={SHELBYNET.fullnodeUrl}
+							/>
+							<CopyRow
+								label="Faucet URL"
+								value={SHELBYNET.faucetUrl}
+							/>
+						</div>
+					</>
+				)}
+
+				{!manualMode && (
+					<button
+						type="button"
+						onClick={() => setManualMode(true)}
+						className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] underline underline-offset-2"
+					>
+						Or show manual setup instructions
+					</button>
+				)}
 			</div>
 		</GlassCard>
 	)
