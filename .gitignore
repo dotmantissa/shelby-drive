@@ -39,3 +39,4 @@ downloads/
 
 # legacy quickstart sample assets (40MB of test images)
 assets/
+.vercel

@@ -11,13 +11,35 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
+	metadataBase: new URL("https://shelbydrive.vercel.app"),
 	title: `${APP_NAME} — Decentralized File Storage`,
 	description: APP_DESCRIPTION,
+	icons: {
+		icon: [
+			{ url: "/icon.svg", type: "image/svg+xml" },
+			{ url: "/favicon.svg", type: "image/svg+xml" },
+		],
+		shortcut: "/icon.svg",
+		apple: "/icon.svg",
+	},
 	openGraph: {
 		title: APP_NAME,
 		description: "Cloud-grade decentralized file storage on Aptos",
-		images: ["/shelby-og.png"],
+		images: [
+			{
+				url: "/og.svg",
+				width: 1200,
+				height: 630,
+				alt: APP_NAME,
+			},
+		],
 		type: "website",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: APP_NAME,
+		description: APP_DESCRIPTION,
+		images: ["/og.svg"],
 	},
 }
 
