@@ -10,7 +10,11 @@ import {
 } from "@shelby-protocol/sdk/browser"
 import { useCallback, useState } from "react"
 import { aptosClient } from "@/lib/aptos"
-import { BLOB_EXPIRATION_MICROS, isShelbynet } from "@/lib/constants"
+import {
+	BLOB_EXPIRATION_MICROS,
+	isShelbynet,
+	SHELBY_DEPLOYER_ADDRESS,
+} from "@/lib/constants"
 import { getShelbyClient } from "@/lib/shelby"
 import { addressToString } from "@/types/shelby"
 
@@ -151,6 +155,7 @@ export const useUpload = () => {
 				)
 
 				const payload = ShelbyBlobClient.createRegisterBlobPayload({
+					deployer: AccountAddress.from(SHELBY_DEPLOYER_ADDRESS),
 					account: accountAddress,
 					blobName: file.name,
 					blobMerkleRoot: commitments.blob_merkle_root,

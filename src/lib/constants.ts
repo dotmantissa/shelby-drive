@@ -36,6 +36,16 @@ export const SHELBYNET = {
 } as const
 
 /**
+ * Address that deploys the Shelby Move contract (blob_metadata,
+ * global_metadata, etc.). SDK 0.0.9 hardcodes the OLD deployer
+ * (0xc63d6a5e…) which has no modules on the current Shelbynet — the team
+ * redeployed at this new address (taken from SDK 0.3.1). Override the
+ * deployer everywhere the SDK accepts one.
+ */
+export const SHELBY_DEPLOYER_ADDRESS =
+	"0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a"
+
+/**
  * Chain ID is the most reliable signal that a wallet is on Shelbynet —
  * the `name` field varies across wallets (Petra may say "Shelbynet",
  * other wallets may say "Custom" or report the SDK's enum string).
