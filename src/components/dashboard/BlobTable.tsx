@@ -12,6 +12,7 @@ import {
 	Link2,
 	Music,
 	Table,
+	Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { GlassCard } from "@/components/ui/GlassCard"
@@ -32,6 +33,8 @@ import {
 interface BlobTableProps {
 	blobs: ShelbyBlobMetadata[]
 	address: string
+	onDeleteRequest: (blobNameSuffix: string) => void
+	deletingName: string | null
 }
 
 const ICON_MAP = {
@@ -47,7 +50,12 @@ const ICON_MAP = {
 
 type IconKey = keyof typeof ICON_MAP
 
-export function BlobTable({ blobs, address }: BlobTableProps) {
+export function BlobTable({
+	blobs,
+	address,
+	onDeleteRequest,
+	deletingName,
+}: BlobTableProps) {
 	const { download, downloading } = useDownload()
 	const toast = useToast()
 
@@ -67,14 +75,16 @@ export function BlobTable({ blobs, address }: BlobTableProps) {
 					</thead>
 					<tbody>
 						{blobs.map((blob) => {
-							const type = getFileType(blob.name)
+							const name = blob.blobNameSuffix
+							const type = getFileType(name)
 							const Icon =
 								ICON_MAP[(type.iconName as IconKey) ?? "File"] ??
 								FileIcon
-							const isDownloading = downloading === blob.name
+							const isDownloading = downloading === name
+							const isDeleting = deletingName === name
 							return (
 								<tr
-									key={blob.name}
+									key={name}
 									className="border-b border-[var(--bg-border)] transition-colors last:border-0 hover:bg-[var(--bg-elevated)]"
 								>
 									<td className="px-4 py-3">
@@ -90,9 +100,9 @@ export function BlobTable({ blobs, address }: BlobTableProps) {
 											</div>
 											<span
 												className="truncate text-[var(--text-primary)]"
-												title={blob.name}
+												title={name}
 											>
-												{blob.name}
+												{name}
 											</span>
 										</div>
 									</td>
@@ -106,7 +116,7 @@ export function BlobTable({ blobs, address }: BlobTableProps) {
 										<div className="flex items-center justify-end gap-2">
 											<Button
 												size="sm"
-												onClick={() => download(blob.name)}
+												onClick={() => download(name)}
 												loading={isDownloading}
 											>
 												{!isDownloading && (
@@ -132,7 +142,7 @@ export function BlobTable({ blobs, address }: BlobTableProps) {
 														await copyToClipboard(
 															getBlobUrl(
 																address,
-																blob.name,
+																name,
 															),
 														)
 													if (ok) {
@@ -145,6 +155,17 @@ export function BlobTable({ blobs, address }: BlobTableProps) {
 												className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--bg-border)] text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)]"
 											>
 												<Link2 size={14} />
+											</button>
+											<button
+												type="button"
+												onClick={() =>
+													onDeleteRequest(name)
+												}
+												disabled={isDeleting}
+												aria-label="Delete file"
+												className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--bg-border)] text-[var(--text-secondary)] hover:border-[var(--status-error)] hover:text-[var(--status-error)] disabled:opacity-50 disabled:cursor-not-allowed"
+											>
+												<Trash2 size={14} />
 											</button>
 										</div>
 									</td>

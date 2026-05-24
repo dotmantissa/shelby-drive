@@ -1,34 +1,20 @@
 "use client"
 
 import { motion } from "framer-motion"
-import {
-	CheckCircle2,
-	ExternalLink,
-	FileIcon,
-	Wallet,
-	XCircle,
-} from "lucide-react"
+import { CheckCircle2, FileIcon, Wallet, XCircle } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/Button"
 import { Modal } from "@/components/ui/Modal"
-import { ProgressBar } from "@/components/ui/ProgressBar"
 import { Spinner } from "@/components/ui/Spinner"
 import { useToast } from "@/components/ui/ToastProvider"
 import type { UploadState } from "@/hooks/useUpload"
-import { getAptosExplorerTxUrl } from "@/lib/constants"
-import {
-	cn,
-	formatBytes,
-	truncateMiddle,
-} from "@/lib/utils"
-import { UploadSteps } from "./UploadSteps"
+import { cn, formatBytes } from "@/lib/utils"
 
 interface UploadModalProps {
 	open: boolean
 	state: UploadState
 	onClose: () => void
 	onReset: () => void
-	onCompleted?: () => void
 }
 
 export function UploadModal({
@@ -36,7 +22,6 @@ export function UploadModal({
 	state,
 	onClose,
 	onReset,
-	onCompleted,
 }: UploadModalProps) {
 	const toast = useToast()
 	const dismissible =
@@ -44,9 +29,7 @@ export function UploadModal({
 		state.step === "success" ||
 		state.step === "error"
 
-	// Fire the success/error toast exactly once per (step, error) transition.
-	// Without this gate, any rerender that changes the `toast` context value
-	// re-triggers the effect and spawns a new toast.
+	// Fire success/error toasts at most once per state transition.
 	const lastToastedRef = useRef<string>("")
 	useEffect(() => {
 		if (state.step !== "success" && state.step !== "error") {
@@ -69,10 +52,11 @@ export function UploadModal({
 		}
 	}, [state.step, state.error, state.fileName, toast])
 
-	const showProgress =
-		state.step === "encoding" ||
-		state.step === "registering" ||
-		state.step === "uploading"
+	// Close + reset so the dashboard's upload zone is ready for another file.
+	const handleUploadAnother = () => {
+		onReset()
+		onClose()
+	}
 
 	return (
 		<Modal
@@ -100,170 +84,80 @@ export function UploadModal({
 				</div>
 			)}
 
-			{(state.step === "encoding" ||
-				state.step === "registering" ||
-				state.step === "uploading") && (
-				<div className="mb-6">
-					<UploadSteps step={state.step} />
-				</div>
-			)}
-
-			{state.step === "encoding" && (
-				<StepBody
-					title="Encoding your file with Clay erasure codes…"
-					subtitle="Generating cryptographic commitments"
-				/>
-			)}
-
-			{state.step === "registering" && (
-				<>
-					<StepBody
-						title="Registering on Aptos Testnet…"
-						subtitle="Please approve the transaction in your wallet"
-						icon={
-							<Wallet
-								size={32}
-								className="text-[var(--accent-primary)] animate-pulse"
-							/>
-						}
-					/>
-					{state.txHash && (
-						<div className="mt-4 flex items-center justify-center">
-							<a
-								href={getAptosExplorerTxUrl(state.txHash)}
-								target="_blank"
-								rel="noreferrer"
-								className="inline-flex items-center gap-1.5 text-xs text-[var(--accent-primary)] hover:underline"
-							>
-								<span className="font-mono">
-									{truncateMiddle(state.txHash, 10, 8)}
-								</span>
-								<ExternalLink size={12} />
-							</a>
-						</div>
-					)}
-				</>
-			)}
-
 			{state.step === "uploading" && (
-				<StepBody
-					title="Uploading to Shelby storage providers…"
-					subtitle="Your file is being distributed across the decentralized network"
-				/>
-			)}
-
-			{showProgress && (
-				<div className="mt-6">
-					<ProgressBar value={state.progress} />
-					<p className="mt-2 text-right text-xs text-[var(--text-tertiary)]">
-						{Math.round(state.progress)}%
-					</p>
+				<div className="flex flex-col items-center gap-4 py-6 text-center">
+					<Spinner size={36} />
+					<div>
+						<p className="text-base font-medium text-[var(--text-primary)]">
+							Storing on Shelbynet…
+						</p>
+						<p className="mt-1 text-sm text-[var(--text-secondary)]">
+							Encoding, registering on-chain, and uploading to
+							storage providers.
+						</p>
+					</div>
+					<div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--accent-primary)]/30 bg-[var(--accent-dim)] px-3 py-2 text-xs">
+						<Wallet
+							size={14}
+							className="text-[var(--accent-primary)]"
+						/>
+						<span className="text-[var(--text-primary)]">
+							Approve the transaction in your wallet when
+							prompted.
+						</span>
+					</div>
 				</div>
 			)}
 
 			{state.step === "success" && (
-				<SuccessState
-					state={state}
-					onClose={() => {
-						onCompleted?.()
-						onClose()
-					}}
-					onUploadAnother={onReset}
-				/>
+				<div className="flex flex-col items-center gap-3 py-4 text-center">
+					<motion.div
+						initial={{ scale: 0 }}
+						animate={{ scale: 1 }}
+						transition={{
+							type: "spring",
+							stiffness: 300,
+							damping: 18,
+						}}
+					>
+						<CheckCircle2
+							size={56}
+							className="text-[var(--accent-primary)]"
+						/>
+					</motion.div>
+					<h3 className="text-lg font-semibold text-[var(--text-primary)]">
+						File Stored Successfully
+					</h3>
+					<p className="text-sm text-[var(--text-secondary)]">
+						Your file is now distributed across the Shelby network.
+					</p>
+					<div className="mt-2 flex gap-2">
+						<Button
+							variant="outline"
+							onClick={handleUploadAnother}
+						>
+							Upload Another
+						</Button>
+						<Button onClick={onClose}>View Dashboard</Button>
+					</div>
+				</div>
 			)}
 
 			{state.step === "error" && (
-				<ErrorState state={state} onRetry={onReset} onClose={onClose} />
+				<ErrorBody
+					state={state}
+					onRetry={() => {
+						onReset()
+						onClose()
+					}}
+					onClose={onClose}
+				/>
 			)}
 		</Modal>
 	)
 }
 
-function StepBody({
-	title,
-	subtitle,
-	icon,
-}: {
-	title: string
-	subtitle: string
-	icon?: React.ReactNode
-}) {
-	return (
-		<div className="flex flex-col items-center gap-3 py-4 text-center">
-			{icon ?? <Spinner size={32} />}
-			<p className="text-sm font-medium text-[var(--text-primary)]">
-				{title}
-			</p>
-			<p className="text-xs text-[var(--text-secondary)]">{subtitle}</p>
-		</div>
-	)
-}
-
-function SuccessState({
-	state,
-	onClose,
-	onUploadAnother,
-}: {
-	state: UploadState
-	onClose: () => void
-	onUploadAnother: () => void
-}) {
-	return (
-		<div className="flex flex-col items-center gap-3 py-4 text-center">
-			<motion.div
-				initial={{ scale: 0 }}
-				animate={{ scale: 1 }}
-				transition={{ type: "spring", stiffness: 300, damping: 18 }}
-			>
-				<CheckCircle2
-					size={56}
-					className="text-[var(--accent-primary)]"
-				/>
-			</motion.div>
-			<h3 className="text-lg font-semibold text-[var(--text-primary)]">
-				File Stored Successfully
-			</h3>
-			<div className="w-full space-y-2 rounded-lg border border-[var(--bg-border)] bg-[var(--bg-elevated)] p-3 text-left text-xs">
-				{state.blobMerkleRoot && (
-					<DetailRow
-						label="Merkle root"
-						value={truncateMiddle(state.blobMerkleRoot, 10, 8)}
-					/>
-				)}
-				{state.txHash && (
-					<DetailRow
-						label="Tx hash"
-						value={
-							<a
-								href={getAptosExplorerTxUrl(state.txHash)}
-								target="_blank"
-								rel="noreferrer"
-								className="inline-flex items-center gap-1 font-mono text-[var(--accent-primary)] hover:underline"
-							>
-								{truncateMiddle(state.txHash, 10, 8)}
-								<ExternalLink size={10} />
-							</a>
-						}
-					/>
-				)}
-				{state.fileSize !== null && (
-					<DetailRow
-						label="Size"
-						value={formatBytes(state.fileSize)}
-					/>
-				)}
-			</div>
-			<div className="mt-2 flex gap-2">
-				<Button variant="outline" onClick={onUploadAnother}>
-					Upload Another
-				</Button>
-				<Button onClick={onClose}>View Dashboard</Button>
-			</div>
-		</div>
-	)
-}
-
-function ErrorState({
+function ErrorBody({
 	state,
 	onRetry,
 	onClose,
@@ -297,21 +191,6 @@ function ErrorState({
 				</Button>
 				<Button onClick={onRetry}>Try Again</Button>
 			</div>
-		</div>
-	)
-}
-
-function DetailRow({
-	label,
-	value,
-}: {
-	label: string
-	value: React.ReactNode
-}) {
-	return (
-		<div className="flex items-center justify-between gap-3">
-			<span className="text-[var(--text-tertiary)]">{label}</span>
-			<span className="font-mono text-[var(--text-primary)]">{value}</span>
 		</div>
 	)
 }

@@ -14,17 +14,18 @@ import {
 	Link2,
 	Music,
 	Table,
+	Trash2,
 } from "lucide-react"
 import { memo, useState } from "react"
+import { Badge } from "@/components/ui/Badge"
+import { Button } from "@/components/ui/Button"
+import { GlassCard } from "@/components/ui/GlassCard"
 import { useDownload } from "@/hooks/useDownload"
 import {
 	getBlobUrl,
 	getShelbyExplorerAccountUrl,
 } from "@/lib/constants"
 import type { ShelbyBlobMetadata } from "@/lib/shelby"
-import { Badge } from "@/components/ui/Badge"
-import { Button } from "@/components/ui/Button"
-import { GlassCard } from "@/components/ui/GlassCard"
 import {
 	cn,
 	copyToClipboard,
@@ -38,6 +39,8 @@ import { merkleRootToHex } from "@/types/shelby"
 interface BlobCardProps {
 	blob: ShelbyBlobMetadata
 	address: string
+	onDeleteRequest: (blobNameSuffix: string) => void
+	isDeleting: boolean
 }
 
 const ICON_MAP = {
@@ -53,12 +56,21 @@ const ICON_MAP = {
 
 type IconKey = keyof typeof ICON_MAP
 
-function BlobCardInner({ blob, address }: BlobCardProps) {
+function BlobCardInner({
+	blob,
+	address,
+	onDeleteRequest,
+	isDeleting,
+}: BlobCardProps) {
 	const { download, downloading } = useDownload()
 	const [copied, setCopied] = useState<"merkle" | "url" | null>(null)
-	const type = getFileType(blob.name)
+
+	// `blob.name` is "@<address>/<suffix>" — always use the suffix for
+	// display and for constructing direct blob URLs.
+	const displayName = blob.blobNameSuffix
+	const type = getFileType(displayName)
 	const Icon = ICON_MAP[(type.iconName as IconKey) ?? "File"] ?? FileIcon
-	const isDownloading = downloading === blob.name
+	const isDownloading = downloading === displayName
 	const merkleHex = merkleRootToHex(blob.blobMerkleRoot)
 
 	const copy = async (text: string, key: "merkle" | "url") => {
@@ -87,9 +99,9 @@ function BlobCardInner({ blob, address }: BlobCardProps) {
 			<div className="min-w-0 flex-1">
 				<p
 					className="truncate text-sm font-medium text-[var(--text-primary)]"
-					title={blob.name}
+					title={displayName}
 				>
-					{blob.name}
+					{displayName}
 				</p>
 				<p className="mt-0.5 text-xs text-[var(--text-secondary)]">
 					{formatBytes(blob.size)}
@@ -120,7 +132,7 @@ function BlobCardInner({ blob, address }: BlobCardProps) {
 			<div className="flex items-center gap-2">
 				<Button
 					size="sm"
-					onClick={() => download(blob.name)}
+					onClick={() => download(displayName)}
 					loading={isDownloading}
 					disabled={isDownloading}
 					className="flex-1"
@@ -144,7 +156,9 @@ function BlobCardInner({ blob, address }: BlobCardProps) {
 				</a>
 				<button
 					type="button"
-					onClick={() => copy(getBlobUrl(address, blob.name), "url")}
+					onClick={() =>
+						copy(getBlobUrl(address, displayName), "url")
+					}
 					aria-label="Copy direct link"
 					title="Copy direct link"
 					className={cn(
@@ -158,6 +172,21 @@ function BlobCardInner({ blob, address }: BlobCardProps) {
 					) : (
 						<Link2 size={14} />
 					)}
+				</button>
+				<button
+					type="button"
+					onClick={() => onDeleteRequest(displayName)}
+					disabled={isDeleting}
+					aria-label="Delete file"
+					title="Delete file"
+					className={cn(
+						"flex h-8 w-8 items-center justify-center rounded-lg",
+						"border border-[var(--bg-border)] text-[var(--text-secondary)]",
+						"hover:border-[var(--status-error)] hover:text-[var(--status-error)]",
+						"disabled:opacity-50 disabled:cursor-not-allowed",
+					)}
+				>
+					<Trash2 size={14} />
 				</button>
 			</div>
 		</GlassCard>

@@ -37,13 +37,16 @@ export const SHELBYNET = {
 
 /**
  * Address that deploys the Shelby Move contract (blob_metadata,
- * global_metadata, etc.). SDK 0.0.9 hardcodes the OLD deployer
- * (0xc63d6a5e…) which has no modules on the current Shelbynet — the team
- * redeployed at this new address (taken from SDK 0.3.1). Override the
- * deployer everywhere the SDK accepts one.
+ * global_metadata, etc.). SDK ≥0.3.1 ships with the correct address baked
+ * in, so this is only used for direct/manual Move calls; keeping it here
+ * as a fallback / single source of truth.
  */
 export const SHELBY_DEPLOYER_ADDRESS =
 	"0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a"
+
+/** Hard limits enforced client-side before the upload mutation runs. */
+export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024 // 50 MB per file
+export const MAX_TOTAL_STORAGE_BYTES = 5 * 1024 * 1024 * 1024 // 5 GB total
 
 /**
  * Chain ID is the most reliable signal that a wallet is on Shelbynet —

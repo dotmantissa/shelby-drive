@@ -2,51 +2,58 @@
 
 import { AccountAddress } from "@aptos-labs/ts-sdk"
 import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { useCallback, useEffect, useState } from "react"
-import { getShelbyClient, type ShelbyBlobMetadata } from "@/lib/shelby"
+import { useAccountBlobs } from "@shelby-protocol/react"
+import type { BlobMetadata } from "@shelby-protocol/sdk/browser"
+import { useMemo } from "react"
 import { addressToString } from "@/types/shelby"
 
 export interface UseBlobsResult {
-	blobs: ShelbyBlobMetadata[]
+	blobs: BlobMetadata[]
 	isLoading: boolean
 	error: string | null
 	refetch: () => void
 	totalSize: number
 }
 
+/**
+ * Thin adapter over `useAccountBlobs` that
+ *   - reads the address from the wallet adapter,
+ *   - filters out expired and deleted blobs,
+ *   - precomputes the total stored bytes for the quota banner.
+ */
 export const useBlobs = (): UseBlobsResult => {
 	const { account } = useWallet()
-	const [blobs, setBlobs] = useState<ShelbyBlobMetadata[]>([])
-	const [isLoading, setIsLoading] = useState(false)
-	const [error, setError] = useState<string | null>(null)
+	const addressStr = account?.address
+		? addressToString(account.address)
+		: null
+	const accountAddr = useMemo(
+		() => (addressStr ? AccountAddress.from(addressStr) : null),
+		[addressStr],
+	)
 
-	const fetchBlobs = useCallback(async () => {
-		if (!account?.address) return
-		setIsLoading(true)
-		setError(null)
-		try {
-			const client = getShelbyClient()
-			const addressStr = addressToString(account.address)
-			const result = await client.coordination.getAccountBlobs({
-				account: AccountAddress.from(addressStr),
-			})
-			const nowMs = Date.now()
-			const active = result.filter(
-				(b) => b.expirationMicros / 1000 > nowMs,
-			)
-			setBlobs(active)
-		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : "Failed to load files")
-		} finally {
-			setIsLoading(false)
-		}
-	}, [account?.address])
+	const { data, isLoading, error, refetch } = useAccountBlobs({
+		account: accountAddr ?? AccountAddress.ONE,
+		enabled: Boolean(accountAddr),
+	})
 
-	useEffect(() => {
-		fetchBlobs()
-	}, [fetchBlobs])
+	const active = useMemo(() => {
+		if (!data) return []
+		const nowMs = Date.now()
+		return data.filter(
+			(b) => !b.isDeleted && b.expirationMicros / 1000 > nowMs,
+		)
+	}, [data])
 
-	const totalSize = blobs.reduce((acc, b) => acc + (b.size ?? 0), 0)
+	const totalSize = useMemo(
+		() => active.reduce((acc, b) => acc + (b.size ?? 0), 0),
+		[active],
+	)
 
-	return { blobs, isLoading, error, refetch: fetchBlobs, totalSize }
+	return {
+		blobs: active,
+		isLoading,
+		error: error ? error.message : null,
+		refetch,
+		totalSize,
+	}
 }
