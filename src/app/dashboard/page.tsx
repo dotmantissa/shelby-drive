@@ -21,6 +21,7 @@ import { useUpload } from "@/hooks/useUpload"
 import {
 	DISCORD_URL,
 	isShelbyConfigured,
+	isShelbynet,
 } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import { addressToString } from "@/types/shelby"
@@ -63,8 +64,7 @@ export default function DashboardPage() {
 	}
 
 	const address = addressToString(account.address)
-	const networkName = network?.name?.toLowerCase()
-	const isOnShelbynet = networkName === "shelbynet"
+	const isOnShelbynet = isShelbynet(network)
 
 	return (
 		<div className="space-y-6 py-8">

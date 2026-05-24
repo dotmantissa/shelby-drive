@@ -7,7 +7,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/Button"
 import { GlassCard } from "@/components/ui/GlassCard"
 import { useToast } from "@/components/ui/ToastProvider"
-import { SHELBYNET } from "@/lib/constants"
+import { isShelbynet, SHELBYNET } from "@/lib/constants"
 import { copyToClipboard } from "@/lib/utils"
 
 interface CopyRowProps {
@@ -56,11 +56,11 @@ export function NetworkBanner() {
 	const [switching, setSwitching] = useState(false)
 	const [manualMode, setManualMode] = useState(false)
 
-	const networkName = network?.name?.toLowerCase()
-	const isOnShelbynet = networkName === "shelbynet"
+	const networkName = network?.name
+	const isOnShelbynet = isShelbynet(network)
 	if (isOnShelbynet) return null
 
-	const currentLabel = network?.name ?? "Unknown"
+	const currentLabel = networkName ?? "Unknown"
 	const walletName = wallet?.name ?? "your wallet"
 
 	const handleSwitch = async () => {

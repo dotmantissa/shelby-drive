@@ -10,7 +10,7 @@ import {
 } from "@shelby-protocol/sdk/browser"
 import { useCallback, useState } from "react"
 import { aptosClient } from "@/lib/aptos"
-import { BLOB_EXPIRATION_MICROS } from "@/lib/constants"
+import { BLOB_EXPIRATION_MICROS, isShelbynet } from "@/lib/constants"
 import { getShelbyClient } from "@/lib/shelby"
 import { addressToString } from "@/types/shelby"
 
@@ -108,12 +108,11 @@ export const useUpload = () => {
 			// Pre-flight: the Shelby contract only exists on Shelbynet. Refusing
 			// here gives a much clearer message than the wallet's opaque
 			// "Simulation error: Generic error".
-			const networkName = network?.name?.toLowerCase()
-			if (networkName && networkName !== "shelbynet") {
+			if (network && !isShelbynet(network)) {
 				setState({
 					...initialState,
 					step: "error",
-					error: `Wallet is on ${network?.name}. Switch to Shelbynet and try again.`,
+					error: `Wallet is on ${network.name ?? "unknown network"}. Switch to Shelbynet and try again.`,
 					fileName: file.name,
 					fileSize: file.size,
 				})
@@ -197,7 +196,7 @@ export const useUpload = () => {
 				}))
 			}
 		},
-		[account, signAndSubmitTransaction, network?.name],
+		[account, signAndSubmitTransaction, network],
 	)
 
 	const reset = useCallback(() => {

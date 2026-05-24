@@ -35,6 +35,21 @@ export const SHELBYNET = {
 	faucetUrl: "https://faucet.shelbynet.shelby.xyz",
 } as const
 
+/**
+ * Chain ID is the most reliable signal that a wallet is on Shelbynet —
+ * the `name` field varies across wallets (Petra may say "Shelbynet",
+ * other wallets may say "Custom" or report the SDK's enum string).
+ */
+export const isShelbynet = (network: {
+	name?: string | null
+	chainId?: string | number | null
+} | null | undefined): boolean => {
+	if (!network) return false
+	if (String(network.chainId ?? "") === String(SHELBYNET.chainId)) return true
+	const name = network.name?.toString().toLowerCase()
+	return name === "shelbynet"
+}
+
 export const APTOS_EXPLORER_BASE = "https://explorer.aptoslabs.com/txn"
 
 /** Default blob lifetime: 30 days, expressed in microseconds since epoch. */
