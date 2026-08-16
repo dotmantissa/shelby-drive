@@ -10,6 +10,11 @@ import {
 	VAULT_UNLOCK_MESSAGE,
 	VAULT_UNLOCK_NONCE,
 } from "@/lib/encryption"
+import {
+	closePreviewWindow,
+	reservePreviewWindow,
+	showPreview,
+} from "@/lib/file-preview"
 import { getShelbyClient } from "@/lib/shelby"
 import { addressToString } from "@/types/shelby"
 
@@ -73,16 +78,6 @@ const triggerDownload = (blob: Blob, fileName: string) => {
 	URL.revokeObjectURL(objectUrl)
 }
 
-const triggerView = (blob: Blob) => {
-	const objectUrl = URL.createObjectURL(blob)
-	const opened = window.open(objectUrl, "_blank", "noopener,noreferrer")
-	if (!opened) {
-		URL.revokeObjectURL(objectUrl)
-		throw new Error("The browser blocked the file preview window")
-	}
-	window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
-}
-
 export const useDownload = () => {
 	const { account, signMessage } = useWallet()
 	const toast = useToast()
@@ -97,6 +92,21 @@ export const useDownload = () => {
 				)
 				return
 			}
+
+			let previewWindow: Window | null = null
+			if (mode === "view") {
+				try {
+					previewWindow = reservePreviewWindow()
+				} catch (error: unknown) {
+					const message =
+						error instanceof Error
+							? error.message
+							: "Preview failed"
+					toast.error("Preview failed", message)
+					return
+				}
+			}
+
 			setRetrieving({ blobName, mode })
 			try {
 				const address = addressToString(account.address)
@@ -143,11 +153,16 @@ export const useDownload = () => {
 							"This file type is not safe to preview in the browser. Download it instead.",
 						)
 					}
-					triggerView(localBlob)
+					if (!previewWindow) {
+						throw new Error("The file preview window is unavailable")
+					}
+					showPreview(previewWindow, localBlob)
+					previewWindow = null
 				} else {
 					triggerDownload(localBlob, fileName)
 				}
 			} catch (error: unknown) {
+				closePreviewWindow(previewWindow)
 				const message =
 					error instanceof Error ? error.message : "Retrieval failed"
 				toast.error(
