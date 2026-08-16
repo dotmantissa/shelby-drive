@@ -3,6 +3,7 @@
 import {
 	createDefaultErasureCodingProvider,
 	type ErasureCodingProvider,
+	NetworkToDefaultLocationHint,
 	ShelbyClient,
 } from "@shelby-protocol/sdk/browser"
 import {
@@ -39,6 +40,9 @@ export const getShelbyClient = (): ShelbyClient => {
 				network: APTOS_NETWORK,
 				fullnode: SHELBYNET.fullnodeUrl,
 			},
+			// Fresh accounts do not have an on-chain location preference yet.
+			// The hint gives register_blob a valid Shelbynet write location.
+			locationHint: NetworkToDefaultLocationHint[APTOS_NETWORK],
 		})
 	}
 	return _client
