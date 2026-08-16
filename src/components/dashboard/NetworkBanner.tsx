@@ -71,7 +71,7 @@ export function NetworkBanner() {
 							<span className="font-mono text-[var(--status-warning)]">
 								{currentLabel}
 							</span>{" "}
-							— switch to Shelbynet to upload
+							. Switch to Shelbynet to upload.
 						</p>
 						<p className="mt-1 text-xs text-[var(--text-secondary)]">
 							The Shelby Move module only exists on{" "}

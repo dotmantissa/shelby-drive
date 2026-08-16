@@ -7,7 +7,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
 	metadataBase: new URL("https://shelbydrive.vercel.app"),
-	title: `${APP_NAME} — Decentralized File Storage`,
+	title: `${APP_NAME} | Encrypted File Storage`,
 	description: APP_DESCRIPTION,
 	icons: {
 		icon: [
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 	},
 	openGraph: {
 		title: APP_NAME,
-		description: "Cloud-grade decentralized file storage on Aptos",
+		description: APP_DESCRIPTION,
 		images: [
 			{
 				url: "/og.svg",
@@ -49,7 +49,7 @@ export default function RootLayout({
 }) {
 	return (
 		<html lang="en">
-			<body className="bg-mesh min-h-screen font-sans text-[var(--text-primary)] antialiased">
+			<body className="min-h-screen font-sans text-[var(--text-primary)] antialiased">
 				<ToastProvider>
 					<Navbar />
 					<main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

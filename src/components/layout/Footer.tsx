@@ -56,7 +56,7 @@ export function Footer() {
 				</nav>
 
 				<p className="text-sm text-[var(--text-secondary)] md:text-right">
-					Powered by Aptos + Jump Crypto
+					Aptos Shelbynet
 				</p>
 			</div>
 		</footer>

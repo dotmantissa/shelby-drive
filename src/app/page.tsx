@@ -3,16 +3,13 @@
 import {
 	ArrowRight,
 	BookOpenText,
-	Coins,
 	Cpu,
 	FileUp,
 	Globe,
-	Link2,
 	Lock,
 	Network,
 	ShieldCheck,
 	Wallet,
-	Zap,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -58,10 +55,10 @@ function Hero({ onLaunch }: { onLaunch: () => void }) {
 
 			<div className="animate-fade-in animation-delay-400 mt-8 flex flex-wrap items-center justify-center gap-3">
 				<Badge colour="#00D4A8" variant="outline">
-					<Zap size={12} /> Sub-second reads
+					<Lock size={12} /> Browser encryption
 				</Badge>
 				<Badge colour="#00D4A8" variant="outline">
-					<ShieldCheck size={12} /> Cryptographic proofs
+					<ShieldCheck size={12} /> Wallet-controlled access
 				</Badge>
 				<Badge colour="#00D4A8" variant="outline">
 					<Network size={12} /> Aptos Shelbynet
@@ -76,7 +73,7 @@ const STEPS = [
 		n: "01",
 		icon: Wallet,
 		title: "Connect Wallet",
-		body: "Use Petra or any compatible Aptos wallet to sign in. No accounts, no passwords.",
+		body: "Connect the Aptos wallet that will own and unlock your files.",
 	},
 	{
 		n: "02",
@@ -87,7 +84,7 @@ const STEPS = [
 	{
 		n: "03",
 		icon: Globe,
-		title: "Access Anywhere",
+		title: "Retrieve File",
 		body: "Sign with the owning wallet to decrypt files locally for download or browser preview.",
 	},
 ]
@@ -100,7 +97,8 @@ function HowItWorks() {
 					How it works
 				</h2>
 				<p className="mt-2 text-sm text-[var(--text-secondary)]">
-					Three steps to take your storage on-chain
+					Files are encrypted before upload and decrypted only when
+					retrieved.
 				</p>
 			</div>
 			<div className="grid gap-4 md:grid-cols-3">
@@ -128,24 +126,24 @@ function HowItWorks() {
 
 const FEATURES = [
 	{
-		icon: Zap,
-		title: "Sub-second reads",
-		body: "Dedicated fiber backbone, not the public internet.",
-	},
-	{
 		icon: Lock,
-		title: "On-chain verification",
-		body: "Every file cryptographically committed to Aptos.",
+		title: "Encrypted file format",
+		body: "Shelby stores SDBLOB01 AES-256-GCM ciphertext, not the original file contents.",
 	},
 	{
-		icon: Coins,
-		title: "Pay-per-use",
-		body: "Only pay for what you store and serve — no minimums.",
+		icon: Wallet,
+		title: "Wallet-controlled retrieval",
+		body: "The owning wallet signs a fixed message to derive the decryption key.",
 	},
 	{
-		icon: Link2,
-		title: "Chain-agnostic",
-		body: "Shelby works across Ethereum, Solana, and Aptos.",
+		icon: ShieldCheck,
+		title: "Duplicate protection",
+		body: "Same-name uploads are rejected before registration and at commit time.",
+	},
+	{
+		icon: Network,
+		title: "Shelbynet storage",
+		body: "Encrypted blobs are registered on Aptos and uploaded to Shelby storage providers.",
 	},
 ]
 
@@ -157,7 +155,8 @@ function Features() {
 					Why Shelby
 				</h2>
 				<p className="mt-2 text-sm text-[var(--text-secondary)]">
-					Cloud-grade performance with Web3-native control
+					The storage and retrieval behavior implemented by this
+					application.
 				</p>
 			</div>
 			<div className="grid gap-4 sm:grid-cols-2">

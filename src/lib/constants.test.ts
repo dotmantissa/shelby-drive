@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isShelbynet, SHELBYNET } from "./constants"
+import { getShelbyFaucetUrl, isShelbynet, SHELBYNET } from "./constants"
 
 describe("Shelbynet detection", () => {
 	it("accepts the current numeric or string chain ID", () => {
@@ -16,5 +16,11 @@ describe("Shelbynet detection", () => {
 		expect(isShelbynet({ name: "Shelbynet" })).toBe(true)
 		expect(isShelbynet({ name: "testnet" })).toBe(false)
 		expect(isShelbynet(null)).toBe(false)
+	})
+
+	it("targets the faucet at the connected wallet", () => {
+		expect(getShelbyFaucetUrl("0x123")).toBe(
+			"https://faucet.shelbynet.shelby.xyz?address=0x123",
+		)
 	})
 })

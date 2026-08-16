@@ -5,8 +5,10 @@ import {
 	AlertTriangle,
 	ChevronLeft,
 	ChevronRight,
-	MessageCircle,
+	Coins,
+	ExternalLink,
 	RefreshCw,
+	ShieldCheck,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { BlobGrid } from "@/components/dashboard/BlobGrid"
@@ -28,7 +30,7 @@ import { useDelete } from "@/hooks/useDelete"
 import { useDownload } from "@/hooks/useDownload"
 import { useUpload } from "@/hooks/useUpload"
 import {
-	DISCORD_URL,
+	getShelbyFaucetUrl,
 	isShelbyConfigured,
 	isShelbynet,
 	MAX_TOTAL_STORAGE_BYTES,
@@ -94,15 +96,6 @@ export default function DashboardPage() {
 		void upload(file)
 	}
 
-	// Surface upload errors that we set immediately (no transaction yet),
-	// since the Modal effect won't run if the modal is hidden after a
-	// fast pre-flight rejection.
-	useEffect(() => {
-		if (uploadState.step === "error" && !uploadOpen) {
-			toast.error("Upload failed", uploadState.error ?? undefined)
-		}
-	}, [uploadState.step, uploadState.error, uploadOpen, toast])
-
 	if (!connected || !account) {
 		return (
 			<div className="flex min-h-[60vh] items-center justify-center py-12">
@@ -111,8 +104,7 @@ export default function DashboardPage() {
 						Connect your wallet to access your Drive
 					</h2>
 					<p className="text-sm text-[var(--text-secondary)]">
-						Your files live under your Aptos address. No accounts,
-						no passwords.
+						Connect the Aptos wallet that owns your stored files.
 					</p>
 					<WalletButton />
 				</GlassCard>
@@ -159,27 +151,28 @@ export default function DashboardPage() {
 
 			<GlassCard padded={false}>
 				<div className="flex items-start gap-3 border-l-4 border-[var(--accent-primary)] px-4 py-3 text-sm">
-					<MessageCircle
+					<Coins
 						size={18}
 						className="shrink-0 text-[var(--accent-primary)]"
 					/>
 					<div className="flex-1">
 						<p className="text-[var(--text-primary)]">
-							Need testnet tokens?
+							Fund this wallet
 						</p>
 						<p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-							You need ShelbyUSD to upload. Join the Shelby
-							Discord to request testnet tokens.
+							The Shelbynet faucet provides test APT for
+							transactions and ShelbyUSD for storage.
 						</p>
 					</div>
 					<a
-						href={DISCORD_URL}
+						href={getShelbyFaucetUrl(address)}
 						target="_blank"
 						rel="noreferrer"
 						className="shrink-0"
 					>
 						<Button size="sm" variant="outline">
-							Discord
+							Claim tokens
+							<ExternalLink size={14} />
 						</Button>
 					</a>
 				</div>
@@ -196,6 +189,24 @@ export default function DashboardPage() {
 				disabled={!onShelbynet || overQuota}
 				remainingBytes={remainingBytes}
 			/>
+
+			<div className="flex items-start gap-3 border-l-2 border-[var(--accent-primary)] px-4 py-1">
+				<ShieldCheck
+					size={18}
+					className="mt-0.5 shrink-0 text-[var(--accent-primary)]"
+				/>
+				<div>
+					<p className="text-sm font-medium text-[var(--text-primary)]">
+						Encrypted file format
+					</p>
+					<p className="mt-1 max-w-3xl text-xs text-[var(--text-secondary)]">
+						Uploads are stored as SDBLOB01 AES-256-GCM ciphertext.
+						Anyone can inspect public metadata and encrypted bytes,
+						but file contents require the key derived from the
+						owning wallet's signature.
+					</p>
+				</div>
+			</div>
 
 			<div className="flex items-center justify-between">
 				<div>

@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/Modal"
 import { Spinner } from "@/components/ui/Spinner"
 import { useToast } from "@/components/ui/ToastProvider"
 import type { UploadState } from "@/hooks/useUpload"
+import { decideUploadNotification } from "@/lib/upload-notifications"
 import { cn, formatBytes } from "@/lib/utils"
 
 interface UploadModalProps {
@@ -22,7 +23,11 @@ export function UploadModal({
 	onClose,
 	onReset,
 }: UploadModalProps) {
-	const toast = useToast()
+	const {
+		success: toastSuccess,
+		error: toastError,
+		info: toastInfo,
+	} = useToast()
 	const dismissible =
 		state.step === "idle" ||
 		state.step === "success" ||
@@ -35,25 +40,20 @@ export function UploadModal({
 	// Fire success/error toasts at most once per state transition.
 	const lastToastedRef = useRef<string>("")
 	useEffect(() => {
-		if (state.step !== "success" && state.step !== "error") {
-			lastToastedRef.current = ""
-			return
-		}
-		const key = `${state.step}:${state.error ?? ""}:${state.fileName ?? ""}`
-		if (lastToastedRef.current === key) return
-		lastToastedRef.current = key
+		const decision = decideUploadNotification(state, lastToastedRef.current)
+		lastToastedRef.current = decision.nextKey
 
-		if (state.step === "success") {
-			toast.success(
-				"File stored successfully",
-				state.fileName ?? undefined,
-			)
-		} else if (state.error === "Transaction cancelled") {
-			toast.info("Transaction cancelled")
-		} else if (state.error) {
-			toast.error("Upload failed", state.error)
+		const notification = decision.notification
+		if (!notification) return
+
+		if (notification.type === "success") {
+			toastSuccess(notification.title, notification.message)
+		} else if (notification.type === "info") {
+			toastInfo(notification.title, notification.message)
+		} else {
+			toastError(notification.title, notification.message)
 		}
-	}, [state.step, state.error, state.fileName, toast])
+	}, [state, toastError, toastInfo, toastSuccess])
 
 	// Close + reset so the dashboard's upload zone is ready for another file.
 	const handleUploadAnother = () => {
@@ -124,7 +124,7 @@ export function UploadModal({
 						File Stored Successfully
 					</h3>
 					<p className="text-sm text-[var(--text-secondary)]">
-						Your file is now distributed across the Shelby network.
+						The encrypted file has been committed and uploaded.
 					</p>
 					<div className="mt-2 flex gap-2">
 						<Button variant="outline" onClick={handleUploadAnother}>

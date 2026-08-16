@@ -37,8 +37,8 @@ export const MAX_TOTAL_STORAGE_BYTES = 5 * 1024 * 1024 * 1024 // 5 GB total
 export const BLOBS_PAGE_SIZE = 24
 
 /**
- * Chain ID is the most reliable signal that a wallet is on Shelbynet —
- * the `name` field varies across wallets (Petra may say "Shelbynet",
+ * Chain ID is the most reliable signal that a wallet is on Shelbynet.
+ * The `name` field varies across wallets (Petra may say "Shelbynet",
  * other wallets may say "Custom" or report the SDK's enum string).
  */
 export const isShelbynet = (
@@ -66,13 +66,15 @@ export const BLOB_EXPIRATION_MICROS = (): number =>
 export const getShelbyExplorerAccountUrl = (address: string): string =>
 	`${SHELBY_EXPLORER_URL}/account/${address}`
 
-export const DISCORD_URL = "https://discord.gg/shelby"
+export const getShelbyFaucetUrl = (address: string): string =>
+	`${SHELBYNET.faucetUrl}?address=${encodeURIComponent(address)}`
+
 export const SHELBY_DOCS_URL = "https://docs.shelby.xyz"
 export const SHELBY_GITHUB_URL = "https://github.com/shelby-protocol"
 
 export const APP_NAME = "Shelby | DRIVE"
-export const APP_TAGLINE = "Your Files. Decentralized."
+export const APP_TAGLINE = "Shelby Drive"
 export const APP_DESCRIPTION =
-	"Store, access, and own your data on the Shelby Protocol — cloud-grade speed, Web3-native control."
+	"Files are stored as SDBLOB01 AES-256-GCM ciphertext. The owning wallet derives the key used for downloads and previews."
 
 export const isShelbyConfigured = (): boolean => SHELBY_KEY.length > 0

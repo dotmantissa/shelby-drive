@@ -68,7 +68,7 @@ function BlobCardInner({
 	const [copied, setCopied] = useState<"merkle" | null>(null)
 	const toast = useToast()
 
-	// `blob.name` is "@<address>/<suffix>" — always use the suffix for
+	// `blob.name` is "@<address>/<suffix>". Always use the suffix for
 	// display and for constructing direct blob URLs.
 	const displayName = blob.blobNameSuffix
 	const type = getFileType(displayName)
