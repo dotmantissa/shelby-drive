@@ -19,8 +19,11 @@ describe("Shelbynet detection", () => {
 	})
 
 	it("targets the faucet at the connected wallet", () => {
-		expect(getShelbyFaucetUrl("0x123")).toBe(
-			"https://faucet.shelbynet.shelby.xyz?address=0x123",
+		expect(getShelbyFaucetUrl("0x123", "aptos")).toBe(
+			"https://docs.shelby.xyz/apis/faucet/aptos?address=0x123&network=shelbynet",
+		)
+		expect(getShelbyFaucetUrl("0x123", "shelbyusd")).toBe(
+			"https://docs.shelby.xyz/apis/faucet/shelbyusd?address=0x123&network=shelbynet",
 		)
 	})
 })

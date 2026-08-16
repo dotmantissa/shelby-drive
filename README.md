@@ -73,9 +73,13 @@ commit time if another upload wins the race.
 - APT for transaction fees and ShelbyUSD for storage
 - A Shelby API key for production rate limits
 
-The dashboard links the connected wallet directly to the Shelbynet faucet at
-`https://faucet.shelbynet.shelby.xyz?address=<wallet>`. The faucet supplies the
-test APT and ShelbyUSD required by the upload transactions.
+The dashboard links the connected wallet to the official Shelbynet funding
+forms:
+
+- `https://docs.shelby.xyz/apis/faucet/aptos` for test APT transaction fees
+- `https://docs.shelby.xyz/apis/faucet/shelbyusd` for ShelbyUSD storage fees
+
+Both links include the connected wallet address and `network=shelbynet`.
 
 ## Setup
 

@@ -150,31 +150,44 @@ export default function DashboardPage() {
 			)}
 
 			<GlassCard padded={false}>
-				<div className="flex items-start gap-3 border-l-4 border-[var(--accent-primary)] px-4 py-3 text-sm">
-					<Coins
-						size={18}
-						className="shrink-0 text-[var(--accent-primary)]"
-					/>
-					<div className="flex-1">
-						<p className="text-[var(--text-primary)]">
-							Fund this wallet
-						</p>
-						<p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-							The Shelbynet faucet provides test APT for
-							transactions and ShelbyUSD for storage.
-						</p>
+				<div className="flex flex-col gap-3 border-l-4 border-[var(--accent-primary)] px-4 py-3 text-sm sm:flex-row sm:items-center">
+					<div className="flex min-w-0 flex-1 items-start gap-3">
+						<Coins
+							size={18}
+							className="shrink-0 text-[var(--accent-primary)]"
+						/>
+						<div>
+							<p className="text-[var(--text-primary)]">
+								Fund this wallet
+							</p>
+							<p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+								Use the official forms to request test APT for
+								transaction fees and ShelbyUSD for storage.
+							</p>
+						</div>
 					</div>
-					<a
-						href={getShelbyFaucetUrl(address)}
-						target="_blank"
-						rel="noreferrer"
-						className="shrink-0"
-					>
-						<Button size="sm" variant="outline">
-							Claim tokens
-							<ExternalLink size={14} />
-						</Button>
-					</a>
+					<div className="flex flex-wrap gap-2 pl-7 sm:pl-0">
+						<a
+							href={getShelbyFaucetUrl(address, "aptos")}
+							target="_blank"
+							rel="noreferrer"
+						>
+							<Button size="sm" variant="outline">
+								Get test APT
+								<ExternalLink size={14} />
+							</Button>
+						</a>
+						<a
+							href={getShelbyFaucetUrl(address, "shelbyusd")}
+							target="_blank"
+							rel="noreferrer"
+						>
+							<Button size="sm" variant="outline">
+								Get ShelbyUSD
+								<ExternalLink size={14} />
+							</Button>
+						</a>
+					</div>
 				</div>
 			</GlassCard>
 

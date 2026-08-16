@@ -10,7 +10,6 @@ export const SHELBYNET = {
 	fullnodeUrl: "https://api.shelbynet.shelby.xyz/v1",
 	indexerUrl: "https://api.shelbynet.shelby.xyz/v1/graphql",
 	rpcUrl: "https://api.shelbynet.shelby.xyz/shelby",
-	faucetUrl: "https://faucet.shelbynet.shelby.xyz",
 } as const
 
 export const APTOS_NETWORK = "shelbynet" as Network.SHELBYNET
@@ -66,8 +65,13 @@ export const BLOB_EXPIRATION_MICROS = (): number =>
 export const getShelbyExplorerAccountUrl = (address: string): string =>
 	`${SHELBY_EXPLORER_URL}/account/${address}`
 
-export const getShelbyFaucetUrl = (address: string): string =>
-	`${SHELBYNET.faucetUrl}?address=${encodeURIComponent(address)}`
+export type ShelbynetFaucetAsset = "aptos" | "shelbyusd"
+
+export const getShelbyFaucetUrl = (
+	address: string,
+	asset: ShelbynetFaucetAsset,
+): string =>
+	`https://docs.shelby.xyz/apis/faucet/${asset}?address=${encodeURIComponent(address)}&network=shelbynet`
 
 export const SHELBY_DOCS_URL = "https://docs.shelby.xyz"
 export const SHELBY_GITHUB_URL = "https://github.com/shelby-protocol"
