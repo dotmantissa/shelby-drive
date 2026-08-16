@@ -13,7 +13,10 @@ export function EmptyState({ onUploadClick }: EmptyStateProps) {
 		<GlassCard className="flex flex-col items-center gap-4 py-12 text-center">
 			<div className="relative flex h-16 w-16 items-center justify-center">
 				<div className="absolute inset-0 animate-pulse-glow rounded-full bg-[var(--accent-dim)]" />
-				<CloudOff size={32} className="relative text-[var(--accent-primary)]" />
+				<CloudOff
+					size={32}
+					className="relative text-[var(--accent-primary)]"
+				/>
 			</div>
 			<div>
 				<h3 className="text-lg font-semibold text-[var(--text-primary)]">

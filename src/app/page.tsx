@@ -1,7 +1,5 @@
 "use client"
 
-import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { motion } from "framer-motion"
 import {
 	ArrowRight,
 	BookOpenText,
@@ -21,68 +19,34 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/Badge"
 import { Button } from "@/components/ui/Button"
 import { GlassCard } from "@/components/ui/GlassCard"
-import {
-	APP_TAGLINE,
-	APP_DESCRIPTION,
-	SHELBY_DOCS_URL,
-} from "@/lib/constants"
+import { APP_DESCRIPTION, APP_TAGLINE, SHELBY_DOCS_URL } from "@/lib/constants"
 
 export default function LandingPage() {
-	const { connected } = useWallet()
 	const router = useRouter()
 
 	const goToDashboard = () => router.push("/dashboard")
 
 	return (
 		<div className="flex flex-col gap-24 py-12 md:py-20">
-			<Hero connected={connected} onLaunch={goToDashboard} />
+			<Hero onLaunch={goToDashboard} />
 			<HowItWorks />
 			<Features />
 		</div>
 	)
 }
 
-function Hero({
-	connected,
-	onLaunch,
-}: {
-	connected: boolean
-	onLaunch: () => void
-}) {
+function Hero({ onLaunch }: { onLaunch: () => void }) {
 	return (
 		<section className="flex flex-col items-center text-center">
-			<motion.h1
-				initial={{ opacity: 0, y: 16 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.5 }}
-				className="max-w-3xl text-4xl font-bold tracking-tight text-[var(--text-primary)] sm:text-5xl md:text-6xl"
-			>
+			<h1 className="animate-rise-in max-w-3xl text-4xl font-bold tracking-tight text-[var(--text-primary)] sm:text-5xl md:text-6xl">
 				{APP_TAGLINE}
-			</motion.h1>
-			<motion.p
-				initial={{ opacity: 0, y: 16 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.5, delay: 0.1 }}
-				className="mt-5 max-w-2xl text-base text-[var(--text-secondary)] sm:text-lg"
-			>
+			</h1>
+			<p className="animate-rise-in animation-delay-100 mt-5 max-w-2xl text-base text-[var(--text-secondary)] sm:text-lg">
 				{APP_DESCRIPTION}
-			</motion.p>
+			</p>
 
-			<motion.div
-				initial={{ opacity: 0, y: 16 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.5, delay: 0.2 }}
-				className="mt-8 flex flex-col items-center gap-3 sm:flex-row"
-			>
-				<Button
-					size="lg"
-					onClick={onLaunch}
-					title={
-						connected
-							? "Open dashboard"
-							: "Connect a wallet to launch the app"
-					}
-				>
+			<div className="animate-rise-in animation-delay-200 mt-8 flex flex-col items-center gap-3 sm:flex-row">
+				<Button size="lg" onClick={onLaunch} title="Open dashboard">
 					Launch App <ArrowRight size={16} />
 				</Button>
 				<a href={SHELBY_DOCS_URL} target="_blank" rel="noreferrer">
@@ -90,14 +54,9 @@ function Hero({
 						<BookOpenText size={16} /> View Docs
 					</Button>
 				</a>
-			</motion.div>
+			</div>
 
-			<motion.div
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={{ duration: 0.5, delay: 0.4 }}
-				className="mt-8 flex flex-wrap items-center justify-center gap-3"
-			>
+			<div className="animate-fade-in animation-delay-400 mt-8 flex flex-wrap items-center justify-center gap-3">
 				<Badge colour="#00D4A8" variant="outline">
 					<Zap size={12} /> Sub-second reads
 				</Badge>
@@ -105,9 +64,9 @@ function Hero({
 					<ShieldCheck size={12} /> Cryptographic proofs
 				</Badge>
 				<Badge colour="#00D4A8" variant="outline">
-					<Network size={12} /> Aptos Testnet
+					<Network size={12} /> Aptos Shelbynet
 				</Badge>
-			</motion.div>
+			</div>
 		</section>
 	)
 }
@@ -123,13 +82,13 @@ const STEPS = [
 		n: "02",
 		icon: FileUp,
 		title: "Upload File",
-		body: "Your file is Clay erasure-coded and committed on the Aptos blockchain before reaching storage.",
+		body: "Your file is encrypted locally, Clay erasure-coded, and committed on Aptos before reaching storage.",
 	},
 	{
 		n: "03",
 		icon: Globe,
 		title: "Access Anywhere",
-		body: "Retrieve files via your wallet address — fast, verifiable, and available globally.",
+		body: "Sign with the owning wallet to decrypt files locally for download or browser preview.",
 	},
 ]
 

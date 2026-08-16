@@ -3,7 +3,6 @@
 import { Menu, X } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
-import { WalletButton } from "@/components/wallet/WalletButton"
 
 function Wordmark() {
 	return (
@@ -13,7 +12,9 @@ function Wordmark() {
 			className="flex items-center gap-1 font-semibold tracking-tight"
 		>
 			<span className="text-lg text-[var(--text-primary)]">Shelby</span>
-			<span className="text-lg text-[var(--accent-primary)]">| DRIVE</span>
+			<span className="text-lg text-[var(--accent-primary)]">
+				| DRIVE
+			</span>
 		</Link>
 	)
 }
@@ -42,7 +43,6 @@ export function Navbar() {
 						>
 							Docs
 						</a>
-						<WalletButton />
 					</nav>
 
 					<button
@@ -74,9 +74,6 @@ export function Navbar() {
 							>
 								Docs
 							</a>
-							<div className="pt-2">
-								<WalletButton />
-							</div>
 						</div>
 					</div>
 				)}

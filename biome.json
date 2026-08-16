@@ -12,7 +12,11 @@
 			"!**/node_modules",
 			"!**/dist",
 			"!**/.next",
-			"!**/out"
+			"!**/out",
+			"!**/.claude",
+			"!**/.vercel",
+			"!**/*.tsbuildinfo",
+			"!**/next-env.d.ts"
 		]
 	},
 	"json": {
@@ -50,5 +54,17 @@
 	},
 	"javascript": {
 		"formatter": { "quoteStyle": "double", "semicolons": "asNeeded" }
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.css"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noUnknownAtRules": "off"
+					}
+				}
+			}
+		}
+	]
 }

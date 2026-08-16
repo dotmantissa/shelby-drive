@@ -1,6 +1,5 @@
 "use client"
 
-import { AnimatePresence, motion } from "framer-motion"
 import {
 	AlertTriangle,
 	CheckCircle2,
@@ -36,48 +35,42 @@ export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
 			aria-live="polite"
 			aria-atomic="false"
 		>
-			<AnimatePresence initial={false}>
-				{toasts.map((t) => {
-					const Icon = ICONS[t.type]
-					const colour = COLOURS[t.type]
-					return (
-						<motion.div
-							key={t.id}
-							initial={{ opacity: 0, x: 24, scale: 0.96 }}
-							animate={{ opacity: 1, x: 0, scale: 1 }}
-							exit={{ opacity: 0, x: 24, scale: 0.96 }}
-							transition={{ duration: 0.2 }}
-							className="glass pointer-events-auto flex items-start gap-3 rounded-xl border-l-4 p-4"
-							style={{ borderLeftColor: colour }}
-							role="alert"
-						>
-							<Icon
-								size={18}
-								style={{ color: colour }}
-								className="mt-0.5 shrink-0"
-							/>
-							<div className="min-w-0 flex-1">
-								<p className="text-sm font-medium text-[var(--text-primary)]">
-									{t.title}
+			{toasts.map((t) => {
+				const Icon = ICONS[t.type]
+				const colour = COLOURS[t.type]
+				return (
+					<div
+						key={t.id}
+						className="glass animate-toast-in pointer-events-auto flex items-start gap-3 rounded-xl border-l-4 p-4"
+						style={{ borderLeftColor: colour }}
+						role="alert"
+					>
+						<Icon
+							size={18}
+							style={{ color: colour }}
+							className="mt-0.5 shrink-0"
+						/>
+						<div className="min-w-0 flex-1">
+							<p className="text-sm font-medium text-[var(--text-primary)]">
+								{t.title}
+							</p>
+							{t.message && (
+								<p className="mt-1 text-xs text-[var(--text-secondary)]">
+									{t.message}
 								</p>
-								{t.message && (
-									<p className="mt-1 text-xs text-[var(--text-secondary)]">
-										{t.message}
-									</p>
-								)}
-							</div>
-							<button
-								type="button"
-								onClick={() => onDismiss(t.id)}
-								aria-label="Dismiss notification"
-								className="shrink-0 rounded p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
-							>
-								<XIcon size={14} />
-							</button>
-						</motion.div>
-					)
-				})}
-			</AnimatePresence>
+							)}
+						</div>
+						<button
+							type="button"
+							onClick={() => onDismiss(t.id)}
+							aria-label="Dismiss notification"
+							className="shrink-0 rounded p-1 text-[var(--text-tertiary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+						>
+							<XIcon size={14} />
+						</button>
+					</div>
+				)
+			})}
 		</div>
 	)
 }

@@ -1,12 +1,7 @@
 "use client"
 
 import { CloudUpload } from "lucide-react"
-import {
-	type DragEvent,
-	useCallback,
-	useRef,
-	useState,
-} from "react"
+import { type DragEvent, useCallback, useRef, useState } from "react"
 import { useToast } from "@/components/ui/ToastProvider"
 import { MAX_FILE_SIZE_BYTES } from "@/lib/constants"
 import { cn, formatBytes } from "@/lib/utils"
@@ -56,7 +51,7 @@ export function UploadZone({
 	}, [disabled])
 
 	const onDrop = useCallback(
-		(e: DragEvent<HTMLDivElement>) => {
+		(e: DragEvent<HTMLButtonElement>) => {
 			e.preventDefault()
 			setDragOver(false)
 			if (disabled) return
@@ -71,12 +66,12 @@ export function UploadZone({
 			<button
 				type="button"
 				onClick={openPicker}
-				onKeyDown={(e) => {
-					if (e.key === "Enter" || e.key === " ") {
-						e.preventDefault()
-						openPicker()
-					}
+				onDragOver={(e) => {
+					e.preventDefault()
+					if (!disabled) setDragOver(true)
 				}}
+				onDragLeave={() => setDragOver(false)}
+				onDrop={onDrop}
 				disabled={disabled}
 				aria-label="Upload a file"
 				className={cn(
@@ -84,12 +79,6 @@ export function UploadZone({
 				)}
 			>
 				<div
-					onDragOver={(e) => {
-						e.preventDefault()
-						if (!disabled) setDragOver(true)
-					}}
-					onDragLeave={() => setDragOver(false)}
-					onDrop={onDrop}
 					className={cn(
 						"glass flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-12 transition-all",
 						dragOver
@@ -117,7 +106,7 @@ export function UploadZone({
 					</div>
 					<p className="text-xs text-[var(--text-tertiary)]">
 						Up to {formatBytes(MAX_FILE_SIZE_BYTES)} per file.
-						Same-name uploads overwrite the previous file.
+						Same-name uploads are rejected.
 					</p>
 				</div>
 			</button>

@@ -2,48 +2,165 @@
 
 import { useWallet } from "@aptos-labs/wallet-adapter-react"
 import { useCallback, useState } from "react"
-import { getBlobUrl } from "@/lib/constants"
+import { useToast } from "@/components/ui/ToastProvider"
+import {
+	createVaultKey,
+	decryptBlob,
+	isEncryptedBlob,
+	VAULT_UNLOCK_MESSAGE,
+	VAULT_UNLOCK_NONCE,
+} from "@/lib/encryption"
+import { getShelbyClient } from "@/lib/shelby"
 import { addressToString } from "@/types/shelby"
 
-export const useDownload = () => {
-	const { account } = useWallet()
-	const [downloading, setDownloading] = useState<string | null>(null)
-	const [error, setError] = useState<string | null>(null)
+export type RetrievalMode = "download" | "view"
 
-	const download = useCallback(
-		async (blobName: string) => {
-			if (!account?.address) return
-			setDownloading(blobName)
-			setError(null)
-			try {
-				const url = getBlobUrl(
-					addressToString(account.address),
-					blobName,
+interface RetrievalState {
+	blobName: string
+	mode: RetrievalMode
+}
+
+const PREVIEWABLE_TYPES = [
+	"application/pdf",
+	"image/gif",
+	"image/jpeg",
+	"image/png",
+	"image/webp",
+	"text/plain",
+] as const
+
+const canPreview = (mimeType: string): boolean =>
+	PREVIEWABLE_TYPES.includes(
+		mimeType as (typeof PREVIEWABLE_TYPES)[number],
+	) ||
+	mimeType.startsWith("audio/") ||
+	mimeType.startsWith("video/")
+
+const readStream = async (
+	stream: ReadableStream,
+	expectedBytes: number,
+): Promise<Uint8Array> => {
+	const reader = stream.getReader()
+	const chunks: Uint8Array[] = []
+	let size = 0
+	while (true) {
+		const { done, value } = await reader.read()
+		if (done) break
+		const chunk =
+			value instanceof Uint8Array
+				? value
+				: new Uint8Array(value as ArrayBuffer)
+		chunks.push(chunk)
+		size += chunk.length
+	}
+	const output = new Uint8Array(Math.max(size, expectedBytes))
+	let offset = 0
+	for (const chunk of chunks) {
+		output.set(chunk, offset)
+		offset += chunk.length
+	}
+	return output.subarray(0, size)
+}
+
+const triggerDownload = (blob: Blob, fileName: string) => {
+	const objectUrl = URL.createObjectURL(blob)
+	const link = document.createElement("a")
+	link.href = objectUrl
+	link.download = fileName
+	document.body.appendChild(link)
+	link.click()
+	link.remove()
+	URL.revokeObjectURL(objectUrl)
+}
+
+const triggerView = (blob: Blob) => {
+	const objectUrl = URL.createObjectURL(blob)
+	const opened = window.open(objectUrl, "_blank", "noopener,noreferrer")
+	if (!opened) {
+		URL.revokeObjectURL(objectUrl)
+		throw new Error("The browser blocked the file preview window")
+	}
+	window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+}
+
+export const useDownload = () => {
+	const { account, signMessage } = useWallet()
+	const toast = useToast()
+	const [retrieving, setRetrieving] = useState<RetrievalState | null>(null)
+
+	const retrieve = useCallback(
+		async (blobName: string, mode: RetrievalMode) => {
+			if (!account?.address) {
+				toast.error(
+					"Retrieval failed",
+					"Connect the owning wallet first.",
 				)
-				const response = await fetch(url)
-				if (!response.ok) {
-					throw new Error(`Download failed: ${response.statusText}`)
+				return
+			}
+			setRetrieving({ blobName, mode })
+			try {
+				const address = addressToString(account.address)
+				const remoteBlob = await getShelbyClient().download({
+					account: address,
+					blobName,
+				})
+				const storedData = await readStream(
+					remoteBlob.readable,
+					remoteBlob.contentLength,
+				)
+
+				let data = storedData
+				let fileName = blobName
+				let mimeType = "application/octet-stream"
+
+				if (isEncryptedBlob(storedData)) {
+					const signed = await signMessage({
+						message: VAULT_UNLOCK_MESSAGE,
+						nonce: VAULT_UNLOCK_NONCE,
+						address: true,
+						application: false,
+						chainId: false,
+					})
+					const key = await createVaultKey(signed.signature, address)
+					const decrypted = await decryptBlob(storedData, key)
+					data = decrypted.data
+					fileName = decrypted.metadata?.name ?? blobName
+					mimeType =
+						decrypted.metadata?.type ?? "application/octet-stream"
+				} else {
+					toast.warning(
+						"Legacy unencrypted file",
+						"This file predates encrypted uploads. Download it and upload a renamed encrypted copy.",
+					)
 				}
-				const blob = await response.blob()
-				const objectUrl = URL.createObjectURL(blob)
-				const link = document.createElement("a")
-				link.href = objectUrl
-				link.download = blobName
-				document.body.appendChild(link)
-				link.click()
-				document.body.removeChild(link)
-				URL.revokeObjectURL(objectUrl)
-			} catch (err: unknown) {
+
+				const localBlob = new Blob([Uint8Array.from(data)], {
+					type: mimeType,
+				})
+				if (mode === "view") {
+					if (!canPreview(mimeType)) {
+						throw new Error(
+							"This file type is not safe to preview in the browser. Download it instead.",
+						)
+					}
+					triggerView(localBlob)
+				} else {
+					triggerDownload(localBlob, fileName)
+				}
+			} catch (error: unknown) {
 				const message =
-					err instanceof Error ? err.message : "Download failed"
-				setError(message)
-				console.error("Download error:", err)
+					error instanceof Error ? error.message : "Retrieval failed"
+				toast.error(
+					mode === "view" ? "Preview failed" : "Download failed",
+					message,
+				)
+				console.error("File retrieval failed", error)
 			} finally {
-				setDownloading(null)
+				setRetrieving(null)
 			}
 		},
-		[account?.address],
+		[account?.address, signMessage, toast],
 	)
 
-	return { download, downloading, error }
+	return { retrieve, retrieving }
 }

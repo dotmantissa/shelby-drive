@@ -1,27 +1,36 @@
 "use client"
 
 import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { useDeleteBlobs } from "@shelby-protocol/react"
+import { useDeleteObjects } from "@shelby-protocol/react"
 import { useCallback, useState } from "react"
 
-export const useDelete = (opts?: { onSuccess?: () => void }) => {
+export const useDelete = (opts?: {
+	onSuccess?: () => void | Promise<void>
+	onError?: (message: string) => void
+}) => {
 	const wallet = useWallet()
 	const [deleting, setDeleting] = useState<string | null>(null)
 	const [error, setError] = useState<string | null>(null)
 
-	const { mutateAsync: deleteBlobs } = useDeleteBlobs({})
+	const { mutateAsync: deleteObjects } = useDeleteObjects({})
 
 	const remove = useCallback(
 		async (blobNameSuffix: string) => {
-			if (!wallet.account) return
+			if (!wallet.account) {
+				const message =
+					"Connect the owning wallet before deleting a file."
+				setError(message)
+				opts?.onError?.(message)
+				return
+			}
 			setDeleting(blobNameSuffix)
 			setError(null)
 			try {
-				await deleteBlobs({
+				await deleteObjects({
 					signer: wallet,
 					blobNames: [blobNameSuffix],
 				})
-				opts?.onSuccess?.()
+				await opts?.onSuccess?.()
 			} catch (err: unknown) {
 				const msg =
 					err instanceof Error ? err.message : String(err ?? "")
@@ -30,14 +39,17 @@ export const useDelete = (opts?: { onSuccess?: () => void }) => {
 					/user rejected|user denied/i.test(msg)
 				) {
 					setError("Transaction cancelled")
+					opts?.onError?.("Transaction cancelled")
 				} else {
-					setError(msg || "Delete failed")
+					const message = msg || "Delete failed"
+					setError(message)
+					opts?.onError?.(message)
 				}
 			} finally {
 				setDeleting(null)
 			}
 		},
-		[deleteBlobs, wallet, opts],
+		[deleteObjects, wallet, opts],
 	)
 
 	return { remove, deleting, error }

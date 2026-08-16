@@ -1,6 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
 import { CheckCircle2, FileIcon, Wallet, XCircle } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/Button"
@@ -28,6 +27,10 @@ export function UploadModal({
 		state.step === "idle" ||
 		state.step === "success" ||
 		state.step === "error"
+	const activeStep =
+		state.step in uploadStepCopy
+			? uploadStepCopy[state.step as keyof typeof uploadStepCopy]
+			: null
 
 	// Fire success/error toasts at most once per state transition.
 	const lastToastedRef = useRef<string>("")
@@ -84,47 +87,39 @@ export function UploadModal({
 				</div>
 			)}
 
-			{state.step === "uploading" && (
+			{activeStep && (
 				<div className="flex flex-col items-center gap-4 py-6 text-center">
 					<Spinner size={36} />
 					<div>
 						<p className="text-base font-medium text-[var(--text-primary)]">
-							Storing on Shelbynet…
+							{activeStep.title}
 						</p>
 						<p className="mt-1 text-sm text-[var(--text-secondary)]">
-							Encoding, registering on-chain, and uploading to
-							storage providers.
+							{activeStep.description}
 						</p>
 					</div>
-					<div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--accent-primary)]/30 bg-[var(--accent-dim)] px-3 py-2 text-xs">
-						<Wallet
-							size={14}
-							className="text-[var(--accent-primary)]"
-						/>
-						<span className="text-[var(--text-primary)]">
-							Approve the transaction in your wallet when
-							prompted.
-						</span>
-					</div>
+					{activeStep.walletPrompt && (
+						<div className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--accent-primary)]/30 bg-[var(--accent-dim)] px-3 py-2 text-xs">
+							<Wallet
+								size={14}
+								className="text-[var(--accent-primary)]"
+							/>
+							<span className="text-[var(--text-primary)]">
+								Approve the request in your wallet.
+							</span>
+						</div>
+					)}
 				</div>
 			)}
 
 			{state.step === "success" && (
 				<div className="flex flex-col items-center gap-3 py-4 text-center">
-					<motion.div
-						initial={{ scale: 0 }}
-						animate={{ scale: 1 }}
-						transition={{
-							type: "spring",
-							stiffness: 300,
-							damping: 18,
-						}}
-					>
+					<div className="animate-success-in">
 						<CheckCircle2
 							size={56}
 							className="text-[var(--accent-primary)]"
 						/>
-					</motion.div>
+					</div>
 					<h3 className="text-lg font-semibold text-[var(--text-primary)]">
 						File Stored Successfully
 					</h3>
@@ -132,10 +127,7 @@ export function UploadModal({
 						Your file is now distributed across the Shelby network.
 					</p>
 					<div className="mt-2 flex gap-2">
-						<Button
-							variant="outline"
-							onClick={handleUploadAnother}
-						>
+						<Button variant="outline" onClick={handleUploadAnother}>
 							Upload Another
 						</Button>
 						<Button onClick={onClose}>View Dashboard</Button>
@@ -156,6 +148,39 @@ export function UploadModal({
 		</Modal>
 	)
 }
+
+const uploadStepCopy = {
+	authorizing: {
+		title: "Unlocking encryption...",
+		description:
+			"Sign a message to derive the local encryption key. This does not submit a transaction.",
+		walletPrompt: true,
+	},
+	encrypting: {
+		title: "Encrypting locally...",
+		description:
+			"Your plaintext stays in this browser while AES-256-GCM protects the file.",
+		walletPrompt: false,
+	},
+	registering: {
+		title: "Registering on Shelbynet...",
+		description:
+			"Approve the first transaction to register the encrypted blob metadata.",
+		walletPrompt: true,
+	},
+	uploading: {
+		title: "Uploading encrypted data...",
+		description:
+			"Sending erasure-coded ciphertext to Shelby storage providers.",
+		walletPrompt: false,
+	},
+	committing: {
+		title: "Committing the upload...",
+		description:
+			"Approve the second transaction to finalize the encrypted file.",
+		walletPrompt: true,
+	},
+} as const
 
 function ErrorBody({
 	state,

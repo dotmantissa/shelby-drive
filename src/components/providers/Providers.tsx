@@ -6,12 +6,11 @@ import { type PropsWithChildren, useState } from "react"
 import { getShelbyClient } from "@/lib/shelby"
 
 /**
- * Wraps children in QueryClientProvider + ShelbyClientProvider so the
- * @shelby-protocol/react hooks can use them. Both clients are instantiated
- * once per browser session (the QueryClient via useState so each user gets
- * their own cache; the Shelby client via the module-level singleton).
+ * Dashboard-only providers. Keeping this boundary below the root layout
+ * prevents Shelby's SDK and erasure-coding code from entering the landing
+ * page bundle.
  */
-export function Providers({ children }: PropsWithChildren) {
+export function ShelbyProviders({ children }: PropsWithChildren) {
 	const [queryClient] = useState(
 		() =>
 			new QueryClient({

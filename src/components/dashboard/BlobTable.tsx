@@ -5,36 +5,30 @@ import {
 	Braces,
 	Download,
 	ExternalLink,
+	Eye,
 	File as FileIcon,
 	FileText,
 	Film,
 	Image as ImageIcon,
-	Link2,
+	LockKeyhole,
 	Music,
 	Table,
 	Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { GlassCard } from "@/components/ui/GlassCard"
-import { useToast } from "@/components/ui/ToastProvider"
-import { useDownload } from "@/hooks/useDownload"
-import {
-	getBlobUrl,
-	getShelbyExplorerAccountUrl,
-} from "@/lib/constants"
+import type { RetrievalMode } from "@/hooks/useDownload"
+import { getShelbyExplorerAccountUrl } from "@/lib/constants"
 import type { ShelbyBlobMetadata } from "@/lib/shelby"
-import {
-	copyToClipboard,
-	formatBytes,
-	formatExpiry,
-	getFileType,
-} from "@/lib/utils"
+import { formatBytes, formatExpiry, getFileType } from "@/lib/utils"
 
 interface BlobTableProps {
 	blobs: ShelbyBlobMetadata[]
 	address: string
 	onDeleteRequest: (blobNameSuffix: string) => void
 	deletingName: string | null
+	onRetrieve: (blobName: string, mode: RetrievalMode) => void
+	retrieving: { blobName: string; mode: RetrievalMode } | null
 }
 
 const ICON_MAP = {
@@ -55,10 +49,9 @@ export function BlobTable({
 	address,
 	onDeleteRequest,
 	deletingName,
+	onRetrieve,
+	retrieving,
 }: BlobTableProps) {
-	const { download, downloading } = useDownload()
-	const toast = useToast()
-
 	return (
 		<GlassCard padded={false} className="overflow-hidden">
 			<div className="overflow-x-auto">
@@ -78,9 +71,10 @@ export function BlobTable({
 							const name = blob.blobNameSuffix
 							const type = getFileType(name)
 							const Icon =
-								ICON_MAP[(type.iconName as IconKey) ?? "File"] ??
-								FileIcon
-							const isDownloading = downloading === name
+								ICON_MAP[
+									(type.iconName as IconKey) ?? "File"
+								] ?? FileIcon
+							const isRetrieving = retrieving?.blobName === name
 							const isDeleting = deletingName === name
 							return (
 								<tr
@@ -98,6 +92,14 @@ export function BlobTable({
 											>
 												<Icon size={14} />
 											</div>
+											{blob.encryption ===
+												"AES_GCM_V1" && (
+												<LockKeyhole
+													size={13}
+													className="shrink-0 text-[var(--accent-primary)]"
+													aria-label="Encrypted"
+												/>
+											)}
 											<span
 												className="truncate text-[var(--text-primary)]"
 												title={name}
@@ -116,14 +118,35 @@ export function BlobTable({
 										<div className="flex items-center justify-end gap-2">
 											<Button
 												size="sm"
-												onClick={() => download(name)}
-												loading={isDownloading}
+												onClick={() =>
+													onRetrieve(name, "download")
+												}
+												loading={
+													isRetrieving &&
+													retrieving?.mode ===
+														"download"
+												}
+												disabled={isRetrieving}
 											>
-												{!isDownloading && (
-													<Download size={12} />
-												)}
+												{!(
+													isRetrieving &&
+													retrieving?.mode ===
+														"download"
+												) && <Download size={12} />}
 												Download
 											</Button>
+											<button
+												type="button"
+												onClick={() =>
+													onRetrieve(name, "view")
+												}
+												disabled={isRetrieving}
+												aria-label="View file"
+												title="View file"
+												className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--bg-border)] text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+											>
+												<Eye size={14} />
+											</button>
 											<a
 												href={getShelbyExplorerAccountUrl(
 													address,
@@ -135,27 +158,6 @@ export function BlobTable({
 											>
 												<ExternalLink size={14} />
 											</a>
-											<button
-												type="button"
-												onClick={async () => {
-													const ok =
-														await copyToClipboard(
-															getBlobUrl(
-																address,
-																name,
-															),
-														)
-													if (ok) {
-														toast.success(
-															"Link copied",
-														)
-													}
-												}}
-												aria-label="Copy direct link"
-												className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--bg-border)] text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)]"
-											>
-												<Link2 size={14} />
-											</button>
 											<button
 												type="button"
 												onClick={() =>

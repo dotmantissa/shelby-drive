@@ -13,8 +13,21 @@ const config: Config = {
 				"bg-border": "#1E2A35",
 			},
 			fontFamily: {
-				sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-				mono: ["var(--font-mono)", "monospace"],
+				sans: [
+					"Inter",
+					"ui-sans-serif",
+					"system-ui",
+					"-apple-system",
+					"BlinkMacSystemFont",
+					'"Segoe UI"',
+					"sans-serif",
+				],
+				mono: [
+					'"SFMono-Regular"',
+					"Consolas",
+					'"Liberation Mono"',
+					"monospace",
+				],
 			},
 			animation: {
 				"fade-in": "fadeIn 0.4s ease forwards",

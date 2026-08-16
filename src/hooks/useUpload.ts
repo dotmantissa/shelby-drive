@@ -1,17 +1,42 @@
 "use client"
 
+import { AccountAddress } from "@aptos-labs/ts-sdk"
 import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { useUploadBlobs } from "@shelby-protocol/react"
+import {
+	createBlobKey,
+	expectedTotalChunksets,
+	generateCommitments,
+	requiredAckCount,
+	ShelbyBlobClient,
+} from "@shelby-protocol/sdk/browser"
 import { useCallback, useState } from "react"
 import {
 	BLOB_EXPIRATION_MICROS,
+	isShelbynet,
 	MAX_FILE_SIZE_BYTES,
 	MAX_TOTAL_STORAGE_BYTES,
-	isShelbynet,
 } from "@/lib/constants"
+import {
+	createVaultKey,
+	encryptedSize,
+	encryptFile,
+	VAULT_UNLOCK_MESSAGE,
+	VAULT_UNLOCK_NONCE,
+} from "@/lib/encryption"
+import { getErasureCodingProvider, getShelbyClient } from "@/lib/shelby"
+import { isUserRejection, translateUploadError } from "@/lib/upload-errors"
 import { formatBytes } from "@/lib/utils"
+import { addressToString } from "@/types/shelby"
 
-export type UploadStep = "idle" | "uploading" | "success" | "error"
+export type UploadStep =
+	| "idle"
+	| "authorizing"
+	| "encrypting"
+	| "registering"
+	| "uploading"
+	| "committing"
+	| "success"
+	| "error"
 
 export interface UploadState {
 	step: UploadStep
@@ -27,141 +52,216 @@ const initialState: UploadState = {
 	fileSize: null,
 }
 
-const isUserRejection = (err: unknown): boolean => {
-	const msg = err instanceof Error ? err.message : String(err ?? "")
-	return (
-		msg.includes("4001") ||
-		/user rejected/i.test(msg) ||
-		/user denied/i.test(msg) ||
-		/rejected by user/i.test(msg)
-	)
-}
-
-/**
- * Translate raw SDK / wallet errors into messages a user can act on.
- */
-const translateError = (err: unknown): string => {
-	const msg = err instanceof Error ? err.message : String(err ?? "")
-	const lower = msg.toLowerCase()
-	if (
-		lower.includes("function_not_found") ||
-		lower.includes("module_not_found") ||
-		lower.includes("simulation error") ||
-		lower.includes("generic error")
-	) {
-		return "Transaction simulation failed. Most often this means your wallet is on the wrong network — switch to Shelbynet and try again."
-	}
-	if (lower.includes("eblob_write_chunkset_already_exists")) {
-		return "A blob with this exact name already exists for your account. Rename the file before re-uploading."
-	}
-	if (lower.includes("insufficient_balance_for_transaction_fee")) {
-		return "Not enough APT to pay for the transaction fee on Shelbynet."
-	}
-	if (lower.includes("e_insufficient_funds")) {
-		return "Not enough ShelbyUSD to pay for blob storage."
-	}
-	if (lower.includes("429")) {
-		return "Rate limit exceeded. The default API key is heavily throttled."
-	}
-	if (lower.includes("401") || lower.includes("unauthorized")) {
-		return "Unauthorized. Shelby API key isn't accepted by Shelbynet."
-	}
-	return msg || "Upload failed"
-}
-
-/**
- * Wraps `useUploadBlobs` with our own local state machine + pre-flight
- * checks (network, per-file size, total quota).
- */
 export const useUpload = (opts: {
 	totalSizeBytes: number
-	onSuccess?: () => void
+	existingBlobNames: ReadonlySet<string>
+	onSuccess?: () => void | Promise<void>
 }) => {
-	const { totalSizeBytes, onSuccess } = opts
+	const { totalSizeBytes, existingBlobNames, onSuccess } = opts
 	const wallet = useWallet()
-	const { account, network } = wallet
+	const { account, network, signAndSubmitTransaction, signMessage } = wallet
 	const [state, setState] = useState<UploadState>(initialState)
-
-	const { mutateAsync: uploadBlobs } = useUploadBlobs({})
 
 	const upload = useCallback(
 		async (file: File) => {
+			const fail = (error: string) => {
+				setState({
+					step: "error",
+					error,
+					fileName: file.name,
+					fileSize: file.size,
+				})
+			}
+
 			if (!account) {
-				setState({
-					...initialState,
-					step: "error",
-					error: "Wallet not connected",
-					fileName: file.name,
-					fileSize: file.size,
-				})
+				fail("Wallet not connected")
 				return
 			}
-
-			if (network && !isShelbynet(network)) {
-				setState({
-					...initialState,
-					step: "error",
-					error: `Wallet is on ${network.name ?? "unknown network"}. Switch to Shelbynet and try again.`,
-					fileName: file.name,
-					fileSize: file.size,
-				})
+			if (!isShelbynet(network)) {
+				fail(
+					`Wallet is on ${network?.name ?? "an unknown network"}. Switch to Shelbynet and try again.`,
+				)
 				return
 			}
-
+			if (existingBlobNames.has(file.name)) {
+				fail(
+					"A file with this name already exists. Rename it or delete the existing file first.",
+				)
+				return
+			}
 			if (file.size > MAX_FILE_SIZE_BYTES) {
-				setState({
-					...initialState,
-					step: "error",
-					error: `File is ${formatBytes(file.size)} — maximum upload is ${formatBytes(MAX_FILE_SIZE_BYTES)} per file.`,
-					fileName: file.name,
-					fileSize: file.size,
-				})
+				fail(
+					`File is ${formatBytes(file.size)}; maximum upload is ${formatBytes(MAX_FILE_SIZE_BYTES)} per file.`,
+				)
 				return
 			}
 
-			if (totalSizeBytes + file.size > MAX_TOTAL_STORAGE_BYTES) {
+			const storedSize = encryptedSize(file)
+			if (totalSizeBytes + storedSize > MAX_TOTAL_STORAGE_BYTES) {
 				const remaining = Math.max(
 					0,
 					MAX_TOTAL_STORAGE_BYTES - totalSizeBytes,
 				)
-				setState({
-					...initialState,
-					step: "error",
-					error: `You've used ${formatBytes(totalSizeBytes)} of the ${formatBytes(MAX_TOTAL_STORAGE_BYTES)} quota — only ${formatBytes(remaining)} remaining. Delete some files first.`,
-					fileName: file.name,
-					fileSize: file.size,
-				})
+				fail(
+					`Only ${formatBytes(remaining)} remains in this Drive. The encrypted file needs ${formatBytes(storedSize)}.`,
+				)
 				return
 			}
 
-			setState({
-				step: "uploading",
-				error: null,
-				fileName: file.name,
-				fileSize: file.size,
-			})
+			const accountAddress = AccountAddress.from(
+				addressToString(account.address),
+				{ maxMissingChars: 63 },
+			)
+			const client = getShelbyClient()
 
 			try {
-				const data = new Uint8Array(await file.arrayBuffer())
-				await uploadBlobs({
-					signer: wallet,
-					blobs: [{ blobName: file.name, blobData: data }],
-					expirationMicros: BLOB_EXPIRATION_MICROS(),
+				const existing =
+					await client.coordination.getFullObjectMetadata({
+						account: accountAddress,
+						name: file.name,
+					})
+				if (existing && !existing.isDeleted) {
+					throw new Error("AlreadyExists")
+				}
+
+				setState({
+					step: "authorizing",
+					error: null,
+					fileName: file.name,
+					fileSize: file.size,
 				})
-				setState((s) => ({ ...s, step: "success" }))
-				onSuccess?.()
+				const signed = await signMessage({
+					message: VAULT_UNLOCK_MESSAGE,
+					nonce: VAULT_UNLOCK_NONCE,
+					address: true,
+					application: false,
+					chainId: false,
+				})
+				const key = await createVaultKey(
+					signed.signature,
+					accountAddress.toString(),
+				)
+
+				setState((current) => ({ ...current, step: "encrypting" }))
+				const encryptedData = await encryptFile(file, key)
+				const provider = await getErasureCodingProvider()
+				const commitments = await generateCommitments(
+					provider,
+					encryptedData,
+				)
+				const chunksetSizeBytes =
+					provider.config.chunkSizeBytes * provider.config.erasure_k
+				const { aptos, defaultOptions, deployer } = client.coordination
+
+				setState((current) => ({ ...current, step: "registering" }))
+				const registerTx = await signAndSubmitTransaction({
+					data: ShelbyBlobClient.createRegisterBlobPayload({
+						deployer,
+						account: accountAddress,
+						blobName: file.name,
+						selectedLocation: defaultOptions.selectedLocation,
+						locationHint: defaultOptions.locationHint,
+						blobSize: encryptedData.length,
+						blobMerkleRoot: commitments.blob_merkle_root,
+						expirationMicros: BLOB_EXPIRATION_MICROS(),
+						numChunksets: expectedTotalChunksets(
+							encryptedData.length,
+							chunksetSizeBytes,
+						),
+						encoding: provider.config.enumIndex,
+						encryption: "AES_GCM_V1",
+					}),
+				})
+				const registerReceipt = await aptos.waitForTransaction({
+					transactionHash: registerTx.hash,
+				})
+				if (!registerReceipt.success) {
+					throw new Error(
+						`Failed to register encrypted file: ${registerReceipt.vm_status}`,
+					)
+				}
+				const events =
+					"events" in registerReceipt ? registerReceipt.events : []
+				const objectName = createBlobKey({
+					account: accountAddress,
+					blobName: file.name,
+				})
+				const uid = ShelbyBlobClient.registeredBlobUids(
+					events,
+					deployer,
+				).find(
+					(registered) => registered.objectName === objectName,
+				)?.uid
+				if (uid === undefined) {
+					throw new Error(
+						`Shelby did not return a blob UID for ${file.name}`,
+					)
+				}
+
+				setState((current) => ({ ...current, step: "uploading" }))
+				const { spAcks } = await client.rpc.putBlobChunksets({
+					accountAddress,
+					uid,
+					blobData: encryptedData,
+					commitments,
+					chunksetConcurrency: 3,
+				})
+				const minimumAcks = requiredAckCount(provider.config.erasure_n)
+				if (spAcks.length < minimumAcks) {
+					throw new Error(
+						`Only ${spAcks.length} storage providers acknowledged the upload; ${minimumAcks} are required.`,
+					)
+				}
+
+				setState((current) => ({ ...current, step: "committing" }))
+				const commitTx = await signAndSubmitTransaction({
+					data: ShelbyBlobClient.createCommitObjectPayload({
+						deployer,
+						uid,
+						blobName: file.name,
+						overwrite: false,
+						storageProviderAcks: spAcks,
+					}),
+				})
+				const commitReceipt = await aptos.waitForTransaction({
+					transactionHash: commitTx.hash,
+				})
+				if (!commitReceipt.success) {
+					throw new Error(
+						`Failed to commit encrypted file: ${commitReceipt.vm_status}`,
+					)
+				}
+				const commitEvents =
+					"events" in commitReceipt ? commitReceipt.events : []
+				const rejection = ShelbyBlobClient.findObjectCommitRejection(
+					commitEvents,
+					deployer,
+					uid,
+				)
+				if (rejection) {
+					throw new Error(rejection)
+				}
+
+				setState((current) => ({ ...current, step: "success" }))
+				await onSuccess?.()
 			} catch (err: unknown) {
-				const rejected = isUserRejection(err)
-				setState((s) => ({
-					...s,
-					step: "error",
-					error: rejected
+				console.error("Encrypted file upload failed", err)
+				fail(
+					isUserRejection(err)
 						? "Transaction cancelled"
-						: translateError(err),
-				}))
+						: translateUploadError(err),
+				)
 			}
 		},
-		[account, network, totalSizeBytes, uploadBlobs, wallet, onSuccess],
+		[
+			account,
+			existingBlobNames,
+			network,
+			onSuccess,
+			signAndSubmitTransaction,
+			signMessage,
+			totalSizeBytes,
+		],
 	)
 
 	const reset = useCallback(() => {

@@ -1,18 +1,28 @@
 "use client"
 
-import { ShelbyClient } from "@shelby-protocol/sdk/browser"
-import { APTOS_NETWORK, SHELBY_API_KEY, SHELBYNET } from "./constants"
+import {
+	createDefaultErasureCodingProvider,
+	type ErasureCodingProvider,
+	ShelbyClient,
+} from "@shelby-protocol/sdk/browser"
+import {
+	APTOS_NETWORK,
+	SHELBY_API_KEY,
+	SHELBY_RPC_URL,
+	SHELBYNET,
+} from "./constants"
 
-export type { BlobMetadata as ShelbyBlobMetadata } from "@shelby-protocol/sdk/browser"
+export type { FullObjectMetadata as ShelbyBlobMetadata } from "@shelby-protocol/sdk/browser"
 
 let _client: ShelbyClient | null = null
+let _provider: Promise<ErasureCodingProvider> | null = null
 
 /**
  * Singleton ShelbyClient for the browser. SDK ≥0.3.1 ships with the correct
  * deployer address baked in, so we no longer override it.
  *
- * We still pin `rpc.baseUrl` because we use the same host for direct blob
- * downloads via `getBlobUrl()` and want a single source of truth.
+ * We pin `rpc.baseUrl` to the environment-aware canonical endpoint used for
+ * encrypted uploads and downloads.
  *
  * We do NOT override `indexer.baseUrl`: the SDK's default points at the
  * blob indexer (the one with `blobs` / `blob_activities` queries); the
@@ -24,8 +34,19 @@ export const getShelbyClient = (): ShelbyClient => {
 		_client = new ShelbyClient({
 			network: APTOS_NETWORK,
 			apiKey: SHELBY_API_KEY,
-			rpc: { baseUrl: SHELBYNET.rpcUrl, apiKey: SHELBY_API_KEY },
+			rpc: { baseUrl: SHELBY_RPC_URL, apiKey: SHELBY_API_KEY },
+			aptos: {
+				network: APTOS_NETWORK,
+				fullnode: SHELBYNET.fullnodeUrl,
+			},
 		})
 	}
 	return _client
+}
+
+export const getErasureCodingProvider = (): Promise<ErasureCodingProvider> => {
+	if (!_provider) {
+		_provider = createDefaultErasureCodingProvider()
+	}
+	return _provider
 }

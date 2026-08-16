@@ -1,14 +1,18 @@
-import { format, formatDistanceToNow } from "date-fns"
-import { filesize as formatFilesize } from "filesize"
+const BYTE_UNITS = ["B", "KiB", "MiB", "GiB", "TiB"] as const
 
-export const formatBytes = (bytes: number): string =>
-	formatFilesize(bytes, { standard: "jedec" }) as string
+export const formatBytes = (bytes: number): string => {
+	if (!Number.isFinite(bytes) || bytes <= 0) return "0 B"
+	const unitIndex = Math.min(
+		Math.floor(Math.log(bytes) / Math.log(1024)),
+		BYTE_UNITS.length - 1,
+	)
+	const value = bytes / 1024 ** unitIndex
+	return `${new Intl.NumberFormat("en", {
+		maximumFractionDigits: value >= 10 || unitIndex === 0 ? 0 : 1,
+	}).format(value)} ${BYTE_UNITS[unitIndex]}`
+}
 
-export const truncate = (
-	str: string,
-	startChars = 6,
-	endChars = 4,
-): string =>
+export const truncate = (str: string, startChars = 6, endChars = 4): string =>
 	str.length <= startChars + endChars + 3
 		? str
 		: `${str.slice(0, startChars)}...${str.slice(-endChars)}`
@@ -25,13 +29,23 @@ export const truncateMiddle = (
 export const formatExpiry = (expirationMicros: number): string => {
 	const ms = expirationMicros / 1000
 	const date = new Date(ms)
-	const relative = formatDistanceToNow(date, { addSuffix: true })
-	const absolute = format(date, "MMM d, yyyy")
+	const relative = formatRelativeTime(ms)
+	const absolute = new Intl.DateTimeFormat("en", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	}).format(date)
 	return `${relative} · ${absolute}`
 }
 
 export const formatCreated = (creationMicros: number): string =>
-	format(new Date(creationMicros / 1000), "MMM d, yyyy · h:mm a")
+	new Intl.DateTimeFormat("en", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+	}).format(new Date(creationMicros / 1000))
 
 export const isExpired = (expirationMicros: number): boolean =>
 	expirationMicros / 1000 < Date.now()
@@ -75,13 +89,30 @@ export const getFileType = (name: string): FileTypeInfo => {
 	return map[ext] ?? { iconName: "File", colour: "#8B9DB0", label: "File" }
 }
 
-export const copyToClipboard = async (text: string): Promise<boolean> => {
-	try {
-		await navigator.clipboard.writeText(text)
-		return true
-	} catch {
-		return false
+const formatRelativeTime = (timestampMs: number): string => {
+	const deltaSeconds = Math.round((timestampMs - Date.now()) / 1000)
+	const ranges = [
+		{ limit: 60, divisor: 1, unit: "second" },
+		{ limit: 3600, divisor: 60, unit: "minute" },
+		{ limit: 86400, divisor: 3600, unit: "hour" },
+		{ limit: 2_592_000, divisor: 86400, unit: "day" },
+		{ limit: 31_536_000, divisor: 2_592_000, unit: "month" },
+		{ limit: Number.POSITIVE_INFINITY, divisor: 31_536_000, unit: "year" },
+	] as const
+	const absoluteSeconds = Math.abs(deltaSeconds)
+	const range =
+		ranges.find(({ limit }) => absoluteSeconds < limit) ?? ranges[0]
+	return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(
+		Math.round(deltaSeconds / range.divisor),
+		range.unit,
+	)
+}
+
+export const copyToClipboard = async (text: string): Promise<void> => {
+	if (!navigator.clipboard) {
+		throw new Error("Clipboard access is not available in this browser")
 	}
+	await navigator.clipboard.writeText(text)
 }
 
 export const cn = (...classes: Array<string | false | null | undefined>) =>

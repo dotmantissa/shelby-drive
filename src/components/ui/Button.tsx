@@ -17,10 +17,8 @@ const variantClasses: Record<Variant, string> = {
 	primary: "btn-primary",
 	outline:
 		"border border-[var(--accent-primary)] text-[var(--accent-primary)] hover:bg-[var(--accent-dim)] transition-colors",
-	ghost:
-		"text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors",
-	danger:
-		"bg-[var(--status-error)] text-white hover:opacity-90 transition-opacity",
+	ghost: "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors",
+	danger: "bg-[var(--status-error)] text-white hover:opacity-90 transition-opacity",
 }
 
 const sizeClasses: Record<Size, string> = {

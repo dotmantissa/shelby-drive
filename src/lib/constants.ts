@@ -1,33 +1,11 @@
-import { Network } from "@aptos-labs/ts-sdk"
+import type { Network } from "@aptos-labs/ts-sdk"
 
 const SHELBY_KEY = process.env.NEXT_PUBLIC_SHELBY_API_KEY ?? ""
 const APTOS_KEY = process.env.NEXT_PUBLIC_APTOS_API_KEY ?? ""
 
-/**
- * In SDK 0.0.9 only `Network.SHELBYNET` resolves to a working RPC URL.
- * The Aptos wallet adapter also accepts this network value.
- */
-export const APTOS_NETWORK = Network.SHELBYNET
-export const SHELBY_API_KEY = SHELBY_KEY
-export const APTOS_API_KEY = APTOS_KEY
-
-/**
- * Base host for the Shelby RPC. The SDK's
- * `NetworkToShelbyRPCBaseUrl.shelbynet = "https://api.shelbynet.shelby.xyz/shelby"`,
- * so we use the host as the base and append `/shelby/v1/blobs/...` for
- * direct downloads.
- */
-export const SHELBY_RPC_URL =
-	process.env.NEXT_PUBLIC_SHELBY_RPC_URL ??
-	"https://api.shelbynet.shelby.xyz"
-
-export const SHELBY_EXPLORER_URL =
-	process.env.NEXT_PUBLIC_SHELBY_EXPLORER_URL ??
-	"https://explorer.shelby.xyz/shelbynet"
-
-/** Canonical Shelbynet endpoints — all live under api.shelbynet.shelby.xyz. */
+/** Canonical Shelbynet endpoints. The live chain moved from ID 113 to 118. */
 export const SHELBYNET = {
-	chainId: 113,
+	chainId: Number(process.env.NEXT_PUBLIC_SHELBY_CHAIN_ID ?? 118),
 	name: "Shelbynet",
 	fullnodeUrl: "https://api.shelbynet.shelby.xyz/v1",
 	indexerUrl: "https://api.shelbynet.shelby.xyz/v1/graphql",
@@ -35,46 +13,55 @@ export const SHELBYNET = {
 	faucetUrl: "https://faucet.shelbynet.shelby.xyz",
 } as const
 
-/**
- * Address that deploys the Shelby Move contract (blob_metadata,
- * global_metadata, etc.). SDK ≥0.3.1 ships with the correct address baked
- * in, so this is only used for direct/manual Move calls; keeping it here
- * as a fallback / single source of truth.
- */
-export const SHELBY_DEPLOYER_ADDRESS =
-	"0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a"
+export const APTOS_NETWORK = "shelbynet" as Network.SHELBYNET
+export const SHELBY_API_KEY = SHELBY_KEY
+export const APTOS_API_KEY = APTOS_KEY
+
+const configuredRpc = process.env.NEXT_PUBLIC_SHELBY_RPC_URL?.replace(
+	/\/+$/,
+	"",
+)
+export const SHELBY_RPC_URL = configuredRpc
+	? configuredRpc.endsWith("/shelby")
+		? configuredRpc
+		: `${configuredRpc}/shelby`
+	: SHELBYNET.rpcUrl
+
+export const SHELBY_EXPLORER_URL =
+	process.env.NEXT_PUBLIC_SHELBY_EXPLORER_URL ??
+	"https://explorer.shelby.xyz/shelbynet"
 
 /** Hard limits enforced client-side before the upload mutation runs. */
 export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024 // 50 MB per file
 export const MAX_TOTAL_STORAGE_BYTES = 5 * 1024 * 1024 * 1024 // 5 GB total
+export const BLOBS_PAGE_SIZE = 24
 
 /**
  * Chain ID is the most reliable signal that a wallet is on Shelbynet —
  * the `name` field varies across wallets (Petra may say "Shelbynet",
  * other wallets may say "Custom" or report the SDK's enum string).
  */
-export const isShelbynet = (network: {
-	name?: string | null
-	chainId?: string | number | null
-} | null | undefined): boolean => {
+export const isShelbynet = (
+	network:
+		| {
+				name?: string | null
+				chainId?: string | number | null
+		  }
+		| null
+		| undefined,
+	expectedChainId = SHELBYNET.chainId,
+): boolean => {
 	if (!network) return false
-	if (String(network.chainId ?? "") === String(SHELBYNET.chainId)) return true
+	if (network.chainId !== null && network.chainId !== undefined) {
+		return String(network.chainId) === String(expectedChainId)
+	}
 	const name = network.name?.toString().toLowerCase()
 	return name === "shelbynet"
 }
 
-export const APTOS_EXPLORER_BASE = "https://explorer.aptoslabs.com/txn"
-
 /** Default blob lifetime: 30 days, expressed in microseconds since epoch. */
 export const BLOB_EXPIRATION_MICROS = (): number =>
 	(Date.now() + 1000 * 60 * 60 * 24 * 30) * 1000
-
-/** Canonical Shelby blob URL: `{rpc}/shelby/v1/blobs/{account}/{blobName}` */
-export const getBlobUrl = (address: string, blobName: string): string =>
-	`${SHELBY_RPC_URL}/shelby/v1/blobs/${address}/${encodeURIComponent(blobName)}`
-
-export const getAptosExplorerTxUrl = (hash: string): string =>
-	`${APTOS_EXPLORER_BASE}/${hash}?network=shelbynet`
 
 export const getShelbyExplorerAccountUrl = (address: string): string =>
 	`${SHELBY_EXPLORER_URL}/account/${address}`

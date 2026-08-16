@@ -28,7 +28,8 @@ export function Badge({
 				"inline-flex items-center gap-1 rounded-full px-2.5 py-0.5",
 				"text-xs font-medium",
 				variant === "outline" && "border",
-				!colour && "bg-[var(--bg-elevated)] text-[var(--text-secondary)]",
+				!colour &&
+					"bg-[var(--bg-elevated)] text-[var(--text-secondary)]",
 				className,
 			)}
 		>

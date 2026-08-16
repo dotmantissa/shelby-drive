@@ -1,23 +1,9 @@
 import { AccountAddress } from "@aptos-labs/ts-sdk"
-import type { BlobMetadata } from "@shelby-protocol/sdk/browser"
-import type { ShelbyBlobMetadata } from "@/lib/shelby"
+import type { FullObjectMetadata } from "@shelby-protocol/sdk/browser"
 
-export type { BlobMetadata }
-
-export interface DriveBlob extends ShelbyBlobMetadata {
-	downloadUrl: string
-	explorerUrl: string
-	isExpired: boolean
-}
+export type { FullObjectMetadata }
 
 export type ViewMode = "grid" | "list"
-
-export interface UploadedFile {
-	file: File
-	name: string
-	size: number
-	type: string
-}
 
 /**
  * Render a `Uint8Array` (the on-chain merkle root) as a 0x-prefixed hex string.

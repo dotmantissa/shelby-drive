@@ -1,8 +1,14 @@
 "use client"
 
 import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { AlertTriangle, MessageCircle, RefreshCw } from "lucide-react"
-import { useEffect, useState } from "react"
+import {
+	AlertTriangle,
+	ChevronLeft,
+	ChevronRight,
+	MessageCircle,
+	RefreshCw,
+} from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 import { BlobGrid } from "@/components/dashboard/BlobGrid"
 import { BlobTable } from "@/components/dashboard/BlobTable"
 import { DeleteBlobModal } from "@/components/dashboard/DeleteBlobModal"
@@ -19,42 +25,69 @@ import { UploadZone } from "@/components/upload/UploadZone"
 import { WalletButton } from "@/components/wallet/WalletButton"
 import { useBlobs } from "@/hooks/useBlobs"
 import { useDelete } from "@/hooks/useDelete"
+import { useDownload } from "@/hooks/useDownload"
 import { useUpload } from "@/hooks/useUpload"
 import {
 	DISCORD_URL,
-	MAX_TOTAL_STORAGE_BYTES,
 	isShelbyConfigured,
 	isShelbynet,
+	MAX_TOTAL_STORAGE_BYTES,
 } from "@/lib/constants"
 import { cn } from "@/lib/utils"
-import { addressToString } from "@/types/shelby"
 import type { ViewMode } from "@/types/shelby"
+import { addressToString } from "@/types/shelby"
 
 export default function DashboardPage() {
 	const { account, connected, network } = useWallet()
 	const [view, setView] = useState<ViewMode>("grid")
 	const [uploadOpen, setUploadOpen] = useState(false)
 	const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+	const [page, setPage] = useState(0)
 	const toast = useToast()
 
-	const { blobs, isLoading, error, refetch, totalSize } = useBlobs()
+	const {
+		blobs,
+		isLoading,
+		error,
+		refetch,
+		totalSize,
+		totalFiles,
+		pageCount,
+	} = useBlobs(page)
+	const existingBlobNames = useMemo(
+		() => new Set(blobs.map((blob) => blob.blobNameSuffix)),
+		[blobs],
+	)
 	const {
 		state: uploadState,
 		upload,
 		reset: resetUpload,
 	} = useUpload({
 		totalSizeBytes: totalSize,
+		existingBlobNames,
 		onSuccess: () => {
-			refetch()
+			setPage(0)
+			return refetch()
 		},
 	})
+	const { retrieve, retrieving } = useDownload()
 	const { remove, deleting: deletingName } = useDelete({
 		onSuccess: () => {
 			toast.success("File deleted")
 			setDeleteTarget(null)
-			refetch()
+			return refetch()
+		},
+		onError: (message) => {
+			toast.error("Delete failed", message)
+			console.error("File deletion failed", message)
 		},
 	})
+
+	useEffect(() => {
+		if (page >= pageCount) {
+			setPage(Math.max(0, pageCount - 1))
+		}
+	}, [page, pageCount])
 
 	const handleFile = (file: File) => {
 		setUploadOpen(true)
@@ -94,6 +127,9 @@ export default function DashboardPage() {
 
 	return (
 		<div className="space-y-6 py-8">
+			<div className="flex justify-end">
+				<WalletButton />
+			</div>
 			<NetworkBanner />
 
 			{!isShelbyConfigured() && (
@@ -151,7 +187,7 @@ export default function DashboardPage() {
 
 			<StorageStats
 				address={address}
-				totalFiles={blobs.length}
+				totalFiles={totalFiles}
 				totalSize={totalSize}
 			/>
 
@@ -169,7 +205,7 @@ export default function DashboardPage() {
 					<p className="text-xs text-[var(--text-secondary)]">
 						{isLoading
 							? "Loading…"
-							: `${blobs.length} file${blobs.length === 1 ? "" : "s"}`}
+							: `${totalFiles} file${totalFiles === 1 ? "" : "s"}`}
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
@@ -208,6 +244,8 @@ export default function DashboardPage() {
 					address={address}
 					onDeleteRequest={setDeleteTarget}
 					deletingName={deletingName}
+					onRetrieve={retrieve}
+					retrieving={retrieving}
 				/>
 			) : (
 				<BlobTable
@@ -215,7 +253,44 @@ export default function DashboardPage() {
 					address={address}
 					onDeleteRequest={setDeleteTarget}
 					deletingName={deletingName}
+					onRetrieve={retrieve}
+					retrieving={retrieving}
 				/>
+			)}
+
+			{pageCount > 1 && (
+				<nav
+					aria-label="File pages"
+					className="flex items-center justify-center gap-3"
+				>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() =>
+							setPage((current) => Math.max(0, current - 1))
+						}
+						disabled={page === 0 || isLoading}
+					>
+						<ChevronLeft size={14} />
+						Previous
+					</Button>
+					<span className="min-w-24 text-center text-xs text-[var(--text-secondary)]">
+						Page {page + 1} of {pageCount}
+					</span>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() =>
+							setPage((current) =>
+								Math.min(pageCount - 1, current + 1),
+							)
+						}
+						disabled={page >= pageCount - 1 || isLoading}
+					>
+						Next
+						<ChevronRight size={14} />
+					</Button>
+				</nav>
 			)}
 
 			<UploadModal

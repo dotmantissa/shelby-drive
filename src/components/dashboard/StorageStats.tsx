@@ -5,13 +5,9 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/Badge"
 import { GlassCard } from "@/components/ui/GlassCard"
 import { ProgressBar } from "@/components/ui/ProgressBar"
+import { useToast } from "@/components/ui/ToastProvider"
 import { MAX_TOTAL_STORAGE_BYTES } from "@/lib/constants"
-import {
-	cn,
-	copyToClipboard,
-	formatBytes,
-	truncate,
-} from "@/lib/utils"
+import { cn, copyToClipboard, formatBytes, truncate } from "@/lib/utils"
 
 interface StorageStatsProps {
 	address: string
@@ -25,17 +21,19 @@ export function StorageStats({
 	totalSize,
 }: StorageStatsProps) {
 	const [copied, setCopied] = useState(false)
-	const usedPct = Math.min(
-		100,
-		(totalSize / MAX_TOTAL_STORAGE_BYTES) * 100,
-	)
+	const toast = useToast()
+	const usedPct = Math.min(100, (totalSize / MAX_TOTAL_STORAGE_BYTES) * 100)
 	const isNearLimit = usedPct >= 80
 
 	const onCopy = async () => {
-		const ok = await copyToClipboard(address)
-		if (ok) {
+		try {
+			await copyToClipboard(address)
 			setCopied(true)
 			setTimeout(() => setCopied(false), 1500)
+		} catch (error: unknown) {
+			const message =
+				error instanceof Error ? error.message : "Copy failed"
+			toast.error("Couldn't copy wallet address", message)
 		}
 	}
 

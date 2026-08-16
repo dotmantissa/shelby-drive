@@ -104,6 +104,95 @@ body {
 	transform: translateY(0);
 }
 
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+}
+
+@keyframes rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(16px);
+	}
+}
+
+@keyframes pop-in {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
+
+@keyframes modal-in {
+	from {
+		opacity: 0;
+		transform: translateY(24px) scale(0.96);
+	}
+}
+
+@keyframes toast-in {
+	from {
+		opacity: 0;
+		transform: translateX(24px) scale(0.96);
+	}
+}
+
+@keyframes success-in {
+	from {
+		opacity: 0;
+		transform: scale(0.7);
+	}
+}
+
+.animate-fade-in,
+.animate-rise-in,
+.animate-pop-in,
+.animate-modal-in,
+.animate-toast-in,
+.animate-success-in {
+	animation-duration: 0.2s;
+	animation-fill-mode: both;
+	animation-timing-function: ease-out;
+}
+
+.animate-rise-in {
+	animation-name: rise-in;
+	animation-duration: 0.5s;
+}
+
+.animate-fade-in {
+	animation-name: fade-in;
+}
+
+.animate-pop-in {
+	animation-name: pop-in;
+}
+
+.animate-modal-in {
+	animation-name: modal-in;
+}
+
+.animate-toast-in {
+	animation-name: toast-in;
+}
+
+.animate-success-in {
+	animation-name: success-in;
+}
+
+.animation-delay-100 {
+	animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+	animation-delay: 0.2s;
+}
+
+.animation-delay-400 {
+	animation-delay: 0.4s;
+}
+
 /* Selection */
 ::selection {
 	background: var(--accent-glow);
@@ -131,11 +220,19 @@ body {
 
 /* Reduce motion preference */
 @media (prefers-reduced-motion: reduce) {
-	*,
-	*::before,
-	*::after {
-		animation-duration: 0.01ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.01ms !important;
+	.animate-fade-in,
+	.animate-rise-in,
+	.animate-pop-in,
+	.animate-modal-in,
+	.animate-toast-in,
+	.animate-success-in,
+	.animate-spin,
+	.animate-pulse-glow {
+		animation: none;
+	}
+
+	.glass-hover,
+	.btn-primary {
+		transition-duration: 0s;
 	}
 }

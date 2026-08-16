@@ -16,6 +16,7 @@ dist/
 *.pem
 .vscode/
 .idea/
+.claude/
 
 # debug
 npm-debug.log*
